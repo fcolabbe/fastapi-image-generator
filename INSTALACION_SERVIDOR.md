@@ -19,7 +19,7 @@ sudo apt update && sudo apt upgrade -y
 
 ### 2. Instalar Python y dependencias
 ```bash
-sudo apt install python3 python3-pip python3-venv -y
+sudo apt install python3 python3-pip python3-venv python3-full -y
 ```
 
 ### 3. Instalar Node.js y NPM
@@ -158,7 +158,7 @@ sudo netstat -tlnp | grep :80
 ```bash
 cd /var/www/fastapi-image-generator
 sudo git pull origin main
-sudo pip3 install -r requirements.txt
+sudo venv/bin/pip install -r requirements.txt
 pm2 restart fastapi-image-generator
 ```
 
@@ -178,7 +178,10 @@ pm2 logs fastapi-image-generator --err
 
 # Verificar dependencias
 cd /var/www/fastapi-image-generator
-python3 -c "import fastapi, uvicorn, PIL, requests; print('Todas las dependencias OK')"
+venv/bin/python -c "import fastapi, uvicorn, PIL, requests; print('Todas las dependencias OK')"
+
+# Verificar entorno virtual
+ls -la venv/bin/
 ```
 
 ### Problema: Nginx no puede conectar

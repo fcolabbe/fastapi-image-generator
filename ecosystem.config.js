@@ -2,7 +2,7 @@ module.exports = {
   apps: [{
     name: 'fastapi-image-generator',
     script: 'app.py',
-    interpreter: 'python3',
+    interpreter: '/var/www/fastapi-image-generator/venv/bin/python',
     cwd: '/var/www/fastapi-image-generator',
     instances: 1,
     exec_mode: 'fork',

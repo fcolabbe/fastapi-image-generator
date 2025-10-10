@@ -28,9 +28,14 @@ else
     cd $APP_DIR
 fi
 
-# Instalar dependencias Python
+# Crear entorno virtual
+echo "🐍 Creando entorno virtual..."
+sudo python3 -m venv $APP_DIR/venv
+
+# Instalar dependencias Python en el entorno virtual
 echo "📦 Instalando dependencias..."
-sudo pip3 install -r requirements.txt
+sudo $APP_DIR/venv/bin/pip install --upgrade pip
+sudo $APP_DIR/venv/bin/pip install -r requirements.txt
 
 # Crear directorio de logs si no existe
 sudo mkdir -p /var/log/pm2
