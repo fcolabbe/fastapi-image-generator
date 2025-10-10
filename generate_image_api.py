@@ -35,14 +35,38 @@ Then visit http://127.0.0.1:8000/docs for an interactive Swagger UI.
 from __future__ import annotations
 
 import io
-import requests
+import os
+import uuid
+from datetime import datetime
 from typing import Optional
 
+import requests
 from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from PIL import Image, ImageDraw, ImageFont
 
-app = FastAPI(title="Image Generator API", description="Generate a news-style image with a headline overlay.")
+# Importar configuración
+from config import BASE_URL, PUBLIC_IMAGES_DIR, APP_NAME, APP_DESCRIPTION
+
+app = FastAPI(title=APP_NAME, description=APP_DESCRIPTION)
+
+# Crear directorio de imágenes públicas si no existe
+os.makedirs(PUBLIC_IMAGES_DIR, exist_ok=True)
+
+
+def _save_image_and_get_url(image: Image.Image) -> str:
+    """Save image to public directory and return public URL."""
+    # Generar nombre único para la imagen
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    unique_id = str(uuid.uuid4())[:8]
+    filename = f"generated_{timestamp}_{unique_id}.png"
+    
+    # Guardar imagen
+    filepath = os.path.join(PUBLIC_IMAGES_DIR, filename)
+    image.save(filepath, format='PNG')
+    
+    # Retornar URL pública
+    return f"{BASE_URL}/public/images/{filename}"
 
 
 def _load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
@@ -325,10 +349,9 @@ def _create_composite_image(
     return img
 
 
-@app.post("/generate-image", response_class=StreamingResponse, responses={
+@app.post("/generate-image", responses={
     200: {
-        "content": {"image/png": {}},
-        "description": "The generated image as a PNG stream."
+        "description": "The generated image URL and metadata."
     },
     400: {"description": "Bad request"}
 })
@@ -337,15 +360,15 @@ async def generate_image(
     highlight: str = Form(..., description="Substring of the headline to highlight."),
     image: UploadFile = File(..., description="Base photograph (PNG/JPEG)."),
     logo: Optional[UploadFile] = File(None, description="Optional logo file to override the default.")
-) -> StreamingResponse:
+):
     """Generate a composite image from user-supplied headline, highlight and photograph.
 
     This endpoint accepts multipart/form-data containing the headline,
-    highlight, base image, and optionally a custom logo. It returns the
-    generated image as a streaming response in PNG format.
+    highlight, base image, and optionally a custom logo. It saves the
+    generated image to a public directory and returns the public URL.
 
     Returns:
-        A FastAPI StreamingResponse containing the PNG image.
+        JSON response containing the public URL of the generated image.
     """
     # Validate input lengths
     if not headline:
@@ -373,17 +396,23 @@ async def generate_image(
         highlight=highlight,
         logo_image=logo_img,
     )
-    # Stream the image as a response
-    buf = io.BytesIO()
-    result_img.save(buf, format='PNG')
-    buf.seek(0)
-    return StreamingResponse(buf, media_type='image/png')
+    
+    # Save image and get public URL
+    image_url = _save_image_and_get_url(result_img)
+    
+    # Return JSON response with URL
+    return {
+        "success": True,
+        "image_url": image_url,
+        "headline": headline,
+        "highlight": highlight,
+        "timestamp": datetime.now().isoformat()
+    }
 
 
-@app.post("/generate-image-from-url", response_class=StreamingResponse, responses={
+@app.post("/generate-image-from-url", responses={
     200: {
-        "content": {"image/png": {}},
-        "description": "The generated image as a PNG stream."
+        "description": "The generated image URL and metadata."
     },
     400: {"description": "Bad request"}
 })
@@ -392,15 +421,15 @@ async def generate_image_from_url(
     highlight: str = Form(..., description="Substring of the headline to highlight."),
     image_url: str = Form(..., description="URL of the base photograph."),
     logo_url: Optional[str] = Form(None, description="Optional URL of a custom logo file.")
-) -> StreamingResponse:
+):
     """Generate a composite image from user-supplied headline, highlight and image URL.
 
     This endpoint accepts a headline, highlight, image URL, and optionally a logo URL.
-    It downloads the images from the URLs and returns the generated image as a 
-    streaming response in PNG format.
+    It downloads the images from the URLs, saves the generated image to a public 
+    directory and returns the public URL.
 
     Returns:
-        A FastAPI StreamingResponse containing the PNG image.
+        JSON response containing the public URL of the generated image.
     """
     # Validate input lengths
     if not headline:
@@ -438,11 +467,17 @@ async def generate_image_from_url(
         logo_image=logo_img,
     )
     
-    # Stream the image as a response
-    buf = io.BytesIO()
-    result_img.save(buf, format='PNG')
-    buf.seek(0)
-    return StreamingResponse(buf, media_type='image/png')
+    # Save image and get public URL
+    image_url = _save_image_and_get_url(result_img)
+    
+    # Return JSON response with URL
+    return {
+        "success": True,
+        "image_url": image_url,
+        "headline": headline,
+        "highlight": highlight,
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 if __name__ == "__main__":  # pragma: no cover

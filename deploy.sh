@@ -40,6 +40,9 @@ sudo $APP_DIR/venv/bin/pip install -r requirements.txt
 # Crear directorio de logs si no existe
 sudo mkdir -p /var/log/pm2
 
+# Crear directorio para imágenes públicas
+sudo mkdir -p $APP_DIR/public/images
+
 # Configurar permisos
 echo "🔐 Configurando permisos..."
 sudo chown -R www-data:www-data $APP_DIR

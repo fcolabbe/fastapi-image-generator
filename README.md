@@ -38,8 +38,18 @@ curl -X POST \
   -F "headline=Título de la noticia" \
   -F "highlight=texto destacado" \
   -F "image=@imagen.jpg" \
-  http://localhost:8000/generate-image \
-  --output resultado.png
+  http://localhost:8000/generate-image
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "image_url": "http://tu-servidor.com/public/images/generated_20250101_123456_abc12345.png",
+  "headline": "Título de la noticia",
+  "highlight": "texto destacado",
+  "timestamp": "2025-01-01T12:34:56.789Z"
+}
 ```
 
 #### 2. Generar imagen desde URL
@@ -48,8 +58,18 @@ curl -X POST \
   -F "headline=Título de la noticia" \
   -F "highlight=texto destacado" \
   -F "image_url=https://ejemplo.com/imagen.jpg" \
-  http://localhost:8000/generate-image-from-url \
-  --output resultado.png
+  http://localhost:8000/generate-image-from-url
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "image_url": "http://tu-servidor.com/public/images/generated_20250101_123456_def67890.png",
+  "headline": "Título de la noticia",
+  "highlight": "texto destacado",
+  "timestamp": "2025-01-01T12:34:56.789Z"
+}
 ```
 
 ## Parámetros
@@ -106,14 +126,40 @@ curl -X POST \
 - Uso de fuente bold para cálculos de ancho
 - Procesamiento eficiente de imágenes grandes
 
+## Configuración
+
+### Configurar URL del Servidor
+
+Edita el archivo `config.py` para cambiar la URL base:
+
+```python
+# URL base del servidor - CAMBIAR POR TU DOMINIO REAL
+BASE_URL = "http://tu-dominio.com"
+```
+
+### Variables de Entorno
+
+También puedes usar variables de entorno:
+
+```bash
+export BASE_URL="https://mi-dominio.com"
+export LOG_LEVEL="debug"
+```
+
 ## Estructura del Proyecto
 
 ```
 imagen/
 ├── generate_image_api.py    # Aplicación principal FastAPI
+├── config.py               # Configuración de la aplicación
+├── app.py                  # Punto de entrada para producción
+├── ecosystem.config.js     # Configuración de PM2
+├── nginx.conf              # Configuración de Nginx
+├── deploy.sh               # Script de despliegue
+├── requirements.txt        # Dependencias Python
 ├── README.md               # Documentación
 ├── El_Dia.png             # Logo del diario
-└── resultado_*.png        # Imágenes de ejemplo generadas
+└── public/images/         # Directorio de imágenes generadas
 ```
 
 ## Dependencias
