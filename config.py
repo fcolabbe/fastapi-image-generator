@@ -5,7 +5,7 @@ Configuración de la aplicación FastAPI Image Generator
 import os
 
 # URL base del servidor - CAMBIAR POR TU DOMINIO REAL
-BASE_URL = os.getenv("BASE_URL", "http://tu-servidor.com")
+BASE_URL = os.getenv("BASE_URL", "https://thumbnail.shortenqr.com")
 
 # Directorio donde se guardan las imágenes públicas
 PUBLIC_IMAGES_DIR = "/var/www/fastapi-image-generator/public/images"
