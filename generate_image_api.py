@@ -192,8 +192,13 @@ def _create_composite_image(
     width, height = img.size
 
     # Determine sizes for fonts relative to image height
-    main_font_size = max(12, int(height * 0.06))  # ensure minimum size
-    side_font_size = max(8, int(height * 0.03))
+    # Para Instagram usamos fuentes más pequeñas para mejor distribución del texto
+    if instagram_format:
+        main_font_size = max(12, int(height * 0.045))  # 25% más pequeño para Instagram
+        side_font_size = max(8, int(height * 0.025))
+    else:
+        main_font_size = max(12, int(height * 0.06))  # tamaño normal para horizontal
+        side_font_size = max(8, int(height * 0.03))
 
     # Load fonts
     font_bold = _load_font(main_font_size, bold=True)
