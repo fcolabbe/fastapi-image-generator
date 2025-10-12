@@ -221,65 +221,63 @@ def _create_composite_image(
     def wrap_text_with_highlights(text, highlight_mask, font, max_width):
         """Wrap text by words while preserving exact character-level highlight information."""
         lines = []
-        current_line = ""
+        words = text.split()  # Split by whitespace
+        
+        current_line_words = []
         current_line_highlights = []
+        char_position = 0
         
-        # Split text into words while preserving exact character positions
-        words = []
-        word_highlights = []
-        i = 0
-        while i < len(text):
-            if text[i].isspace():
-                # Add space
-                words.append(text[i])
-                word_highlights.append([highlight_mask[i] if i < len(highlight_mask) else False])
-                i += 1
-            else:
-                # Extract word
-                word = ""
-                word_highlight_chars = []
-                while i < len(text) and not text[i].isspace():
-                    word += text[i]
-                    word_highlight_chars.append(highlight_mask[i] if i < len(highlight_mask) else False)
-                    i += 1
-                words.append(word)
-                word_highlights.append(word_highlight_chars)
-        
-        # Now wrap by words
-        i = 0
-        while i < len(words):
-            word = words[i]
-            word_highlight_chars = word_highlights[i]
+        for word in words:
+            # Find the word's position in the original text
+            word_start = text.find(word, char_position)
+            word_end = word_start + len(word)
             
-            # Build candidate line
-            if current_line == "":
-                candidate = word
-                candidate_highlights = word_highlight_chars.copy()
-            else:
-                candidate = current_line + word
-                candidate_highlights = current_line_highlights + word_highlight_chars
+            # Get highlight info for this word
+            word_highlight_chars = []
+            for i in range(word_start, word_end):
+                if i < len(highlight_mask):
+                    word_highlight_chars.append(highlight_mask[i])
+                else:
+                    word_highlight_chars.append(False)
             
-            # Check if this line fits - use bold font for width calculation and add extra margin
-            if draw_dummy.textlength(candidate, font=font_bold) <= max_width * 0.95:
-                current_line = candidate
-                current_line_highlights = candidate_highlights
+            # Build candidate line with proper spacing
+            if current_line_words:
+                candidate_text = " ".join(current_line_words + [word])
+                candidate_highlights = current_line_highlights + [False] + word_highlight_chars  # False for space
             else:
-                # Current line is full, save it and start new line
-                if current_line:
-                    lines.append((current_line, current_line_highlights))
-                current_line = word
+                candidate_text = word
+                candidate_highlights = word_highlight_chars
+            
+            # Check if candidate fits - use bold font and be very conservative
+            candidate_width = draw_dummy.textlength(candidate_text, font=font_bold)
+            
+            if candidate_width <= max_width * 0.90:  # Extra conservative margin
+                current_line_words.append(word)
+                if current_line_highlights:
+                    current_line_highlights.append(False)  # Add space highlight
+                current_line_highlights.extend(word_highlight_chars)
+            else:
+                # Line is full, save it and start new line
+                if current_line_words:
+                    line_text = " ".join(current_line_words)
+                    lines.append((line_text, current_line_highlights))
+                
+                # Start new line with current word
+                current_line_words = [word]
                 current_line_highlights = word_highlight_chars
             
-            i += 1
+            # Update character position
+            char_position = word_end
         
         # Add the last line
-        if current_line:
-            lines.append((current_line, current_line_highlights))
+        if current_line_words:
+            line_text = " ".join(current_line_words)
+            lines.append((line_text, current_line_highlights))
         
         return lines
     
     # Wrap the headline with variable line widths - be very conservative to avoid cutting words
-    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * 0.75)
+    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * 0.70)
     
     # Calculate dimensions for each line
     padding_x = 20
