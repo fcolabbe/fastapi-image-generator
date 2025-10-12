@@ -129,6 +129,7 @@ def _create_composite_image(
     text_color: tuple[int, int, int] = (0, 0, 0),
     box_color: tuple[int, int, int, int] = (255, 255, 255, 230),
     logo_scale: float = 0.10,
+    instagram_format: bool = False,
 ) -> Image.Image:
     """Compose a new image by drawing text and a logo over a base photograph.
 
@@ -162,6 +163,32 @@ def _create_composite_image(
     """
     # Ensure we are working on a copy in RGBA mode
     img = base_image.convert("RGBA").copy()
+    
+    # Resize para formato Instagram 4:5 (1080x1350) si es necesario
+    if instagram_format:
+        target_width = 1080
+        target_height = 1350
+        
+        # Calcular recorte centrado
+        aspect_ratio = img.width / img.height
+        target_ratio = target_width / target_height
+        
+        if aspect_ratio > target_ratio:
+            # Imagen más ancha, recortar los lados
+            new_height = img.height
+            new_width = int(new_height * target_ratio)
+            left = (img.width - new_width) // 2
+            img = img.crop((left, 0, left + new_width, new_height))
+        else:
+            # Imagen más alta, recortar arriba/abajo
+            new_width = img.width
+            new_height = int(new_width / target_ratio)
+            top = (img.height - new_height) // 2
+            img = img.crop((0, top, new_width, top + new_height))
+        
+        # Resize al tamaño objetivo
+        img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+    
     width, height = img.size
 
     # Determine sizes for fonts relative to image height
@@ -499,6 +526,143 @@ async def generate_image_from_url(
         "image_url": image_url,
         "headline": headline,
         "highlight": highlight,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/generate-image-instagram", responses={
+    200: {
+        "description": "The generated Instagram image URL and metadata."
+    },
+    400: {"description": "Bad request"}
+})
+async def generate_image_instagram(
+    headline: str = Form(..., description="Full headline to display."),
+    highlight: str = Form(..., description="Substring of the headline to highlight."),
+    image: UploadFile = File(..., description="Base photograph (PNG/JPEG)."),
+    logo: Optional[UploadFile] = File(None, description="Optional logo file to override the default.")
+):
+    """Generate a composite image in Instagram 4:5 format (1080x1350) from user-supplied data.
+
+    This endpoint accepts multipart/form-data containing the headline,
+    highlight, base image, and optionally a custom logo. It saves the
+    generated image in Instagram-optimized format and returns the public URL.
+
+    Returns:
+        JSON response containing the public URL of the generated Instagram image.
+    """
+    # Validate input lengths
+    if not headline:
+        raise HTTPException(status_code=400, detail="headline is required")
+    if not highlight:
+        raise HTTPException(status_code=400, detail="highlight is required")
+    # Read the uploaded base image
+    try:
+        image_data = await image.read()
+        base_img = Image.open(io.BytesIO(image_data)).convert('RGBA')
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not read base image: {exc}")
+    # Read the optional logo if provided
+    logo_img: Optional[Image.Image] = None
+    if logo is not None:
+        try:
+            logo_data = await logo.read()
+            logo_img = Image.open(io.BytesIO(logo_data)).convert('RGBA')
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Could not read logo image: {exc}")
+    # Generate the composite image in Instagram format
+    result_img = _create_composite_image(
+        base_img,
+        headline=headline,
+        highlight=highlight,
+        logo_image=logo_img,
+        instagram_format=True,
+    )
+    
+    # Save image and get public URL
+    image_url = _save_image_and_get_url(result_img)
+    
+    # Return JSON response with URL
+    return {
+        "success": True,
+        "image_url": image_url,
+        "headline": headline,
+        "highlight": highlight,
+        "format": "instagram_4:5",
+        "dimensions": "1080x1350",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/generate-image-instagram-from-url", responses={
+    200: {
+        "description": "The generated Instagram image URL and metadata."
+    },
+    400: {"description": "Bad request"}
+})
+async def generate_image_instagram_from_url(
+    headline: str = Form(..., description="Full headline to display."),
+    highlight: str = Form(..., description="Substring of the headline to highlight."),
+    image_url: str = Form(..., description="URL of the base photograph."),
+    logo_url: Optional[str] = Form(None, description="Optional URL of a custom logo file.")
+):
+    """Generate a composite image in Instagram 4:5 format from image URL.
+
+    This endpoint accepts a headline, highlight, image URL, and optionally a logo URL.
+    It downloads the images from the URLs, saves the generated image in Instagram-optimized 
+    format and returns the public URL.
+
+    Returns:
+        JSON response containing the public URL of the generated Instagram image.
+    """
+    # Validate input lengths
+    if not headline:
+        raise HTTPException(status_code=400, detail="headline is required")
+    if not highlight:
+        raise HTTPException(status_code=400, detail="highlight is required")
+    
+    # Download the base image from URL
+    try:
+        response = requests.get(image_url, timeout=30)
+        response.raise_for_status()
+        base_img = Image.open(io.BytesIO(response.content)).convert('RGBA')
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=400, detail=f"Could not download image from URL: {exc}")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not process downloaded image: {exc}")
+    
+    # Download the optional logo from URL
+    logo_img: Optional[Image.Image] = None
+    if logo_url is not None:
+        try:
+            logo_response = requests.get(logo_url, timeout=30)
+            logo_response.raise_for_status()
+            logo_img = Image.open(io.BytesIO(logo_response.content)).convert('RGBA')
+        except requests.RequestException as exc:
+            raise HTTPException(status_code=400, detail=f"Could not download logo from URL: {exc}")
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Could not process downloaded logo: {exc}")
+    
+    # Generate the composite image in Instagram format
+    result_img = _create_composite_image(
+        base_img,
+        headline=headline,
+        highlight=highlight,
+        logo_image=logo_img,
+        instagram_format=True,
+    )
+    
+    # Save image and get public URL
+    image_url = _save_image_and_get_url(result_img)
+    
+    # Return JSON response with URL
+    return {
+        "success": True,
+        "image_url": image_url,
+        "headline": headline,
+        "highlight": highlight,
+        "format": "instagram_4:5",
+        "dimensions": "1080x1350",
         "timestamp": datetime.now().isoformat()
     }
 

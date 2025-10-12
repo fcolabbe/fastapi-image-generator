@@ -76,8 +76,33 @@ curl -X POST \
 
 - **headline**: El titular completo de la noticia
 - **highlight**: El texto que se destacará (debe estar contenido en el headline)
-- **image**: Archivo de imagen local (para endpoint `/generate-image`)
-- **image_url**: URL de la imagen (para endpoint `/generate-image-from-url`)
+- **image**: Archivo de imagen local (para endpoints `/generate-image`)
+- **image_url**: URL de la imagen (para endpoints `/generate-image-from-url`)
+
+## Formato Instagram
+
+Los endpoints de Instagram generan imágenes en formato vertical 4:5 (1080x1350px) optimizado para Instagram:
+
+```bash
+curl -X POST \
+  -F "headline=Título de la noticia" \
+  -F "highlight=texto destacado" \
+  -F "image_url=https://ejemplo.com/imagen.jpg" \
+  http://localhost:8000/generate-image-instagram-from-url
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "image_url": "http://tu-servidor.com/public/images/generated_20250101_123456_abc12345.png",
+  "headline": "Título de la noticia",
+  "highlight": "texto destacado",
+  "format": "instagram_4:5",
+  "dimensions": "1080x1350",
+  "timestamp": "2025-01-01T12:34:56.789Z"
+}
+```
 
 ## Ejemplos de Uso
 
