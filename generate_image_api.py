@@ -241,7 +241,11 @@ def _create_composite_image(
         img.paste(logo_resized, (width - logo_w - 10, 10), logo_resized)
 
     # Compute available width for text (excluding left bar and margins)
-    available_width = width - bar_width - 20
+    # Para Instagram damos más espacio horizontal al texto
+    if instagram_format:
+        available_width = width - bar_width - 10  # Menos margen en Instagram
+    else:
+        available_width = width - bar_width - 20  # Margen normal en horizontal
     draw_dummy = ImageDraw.Draw(Image.new('RGB', (10, 10)))
     
     # Create a character-by-character map of which characters are highlighted
@@ -324,7 +328,9 @@ def _create_composite_image(
         return lines
     
     # Wrap the headline with variable line widths - calculate real width char by char
-    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * 0.85)
+    # Para Instagram usamos más ancho disponible (90% vs 85%)
+    wrap_factor = 0.90 if instagram_format else 0.85
+    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * wrap_factor)
     
     # Calculate dimensions for each line
     padding_x = 20
