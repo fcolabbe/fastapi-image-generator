@@ -62,10 +62,24 @@ curl -X POST \
 ```
 
 **Respuesta:**
+La API ahora genera automáticamente **AMBAS versiones** (horizontal para web/Facebook e Instagram vertical 4:5):
+
 ```json
 {
   "success": true,
-  "image_url": "http://tu-servidor.com/public/images/generated_20250101_123456_def67890.png",
+  "images": {
+    "horizontal": {
+      "url": "https://tu-servidor.com/public/images/generated_20250101_123456_abc12345.png",
+      "format": "original",
+      "description": "Imagen horizontal para web/Facebook"
+    },
+    "instagram": {
+      "url": "https://tu-servidor.com/public/images/generated_20250101_123457_def67890.png",
+      "format": "4:5",
+      "dimensions": "1080x1350",
+      "description": "Imagen vertical optimizada para Instagram"
+    }
+  },
   "headline": "Título de la noticia",
   "highlight": "texto destacado",
   "timestamp": "2025-01-01T12:34:56.789Z"
@@ -76,44 +90,55 @@ curl -X POST \
 
 - **headline**: El titular completo de la noticia
 - **highlight**: El texto que se destacará (debe estar contenido en el headline)
-- **image**: Archivo de imagen local (para endpoints `/generate-image`)
-- **image_url**: URL de la imagen (para endpoints `/generate-image-from-url`)
+- **image**: Archivo de imagen local (para endpoint `/generate-image`)
+- **image_url**: URL de la imagen (para endpoint `/generate-image-from-url`)
 
-## Formato Instagram
+## Formatos Generados
 
-Los endpoints de Instagram generan imágenes en formato vertical 4:5 (1080x1350px) optimizado para Instagram:
+Cada llamada a la API genera automáticamente **2 imágenes**:
 
+### 1. **Versión Horizontal** (Original)
+- Mantiene las dimensiones originales de la imagen
+- Optimizado para web y Facebook
+- Formato panorámico
+
+### 2. **Versión Instagram** (4:5)
+- Dimensiones: 1080x1350px (ratio 4:5)
+- Recorte inteligente y centrado
+- Optimizado para Instagram y redes verticales
+
+## Ejemplos de Uso
+
+### Ejemplo 1: Noticia de Carabineros (genera ambas versiones)
 ```bash
 curl -X POST \
-  -F "headline=Título de la noticia" \
-  -F "highlight=texto destacado" \
-  -F "image_url=https://ejemplo.com/imagen.jpg" \
-  http://localhost:8000/generate-image-instagram-from-url
+  -F "headline=Cambio de mando en Carabineros: General Christian Brebi asume como nuevo Jefe de la Zona Coquimbo" \
+  -F "highlight=General Christian Brebi" \
+  -F "image_url=https://diarioeldia-s3.cdn.net.ar/s3i233/2025/10/diarioeldia/images/02/31/23/2312395_6bfbb9a763f2750c48d613bd27b191339e04f4dc2c7eeb675fc27762fa4373e3/md.webp" \
+  http://localhost:8000/generate-image-from-url
 ```
 
 **Respuesta:**
 ```json
 {
   "success": true,
-  "image_url": "http://tu-servidor.com/public/images/generated_20250101_123456_abc12345.png",
-  "headline": "Título de la noticia",
-  "highlight": "texto destacado",
-  "format": "instagram_4:5",
-  "dimensions": "1080x1350",
-  "timestamp": "2025-01-01T12:34:56.789Z"
+  "images": {
+    "horizontal": {
+      "url": "https://thumbnail.shortenqr.com/public/images/generated_20250110_150000_abc123.png",
+      "format": "original",
+      "description": "Imagen horizontal para web/Facebook"
+    },
+    "instagram": {
+      "url": "https://thumbnail.shortenqr.com/public/images/generated_20250110_150001_def456.png",
+      "format": "4:5",
+      "dimensions": "1080x1350",
+      "description": "Imagen vertical optimizada para Instagram"
+    }
+  },
+  "headline": "Cambio de mando en Carabineros: General Christian Brebi asume como nuevo Jefe de la Zona Coquimbo",
+  "highlight": "General Christian Brebi",
+  "timestamp": "2025-01-10T15:00:01.123Z"
 }
-```
-
-## Ejemplos de Uso
-
-### Ejemplo 1: Noticia de Carabineros
-```bash
-curl -X POST \
-  -F "headline=Cambio de mando en Carabineros: General Christian Brebi asume como nuevo Jefe de la Zona Coquimbo" \
-  -F "highlight=General Christian Brebi" \
-  -F "image_url=https://diarioeldia-s3.cdn.net.ar/s3i233/2025/10/diarioeldia/images/02/31/23/2312395_6bfbb9a763f2750c48d613bd27b191339e04f4dc2c7eeb675fc27762fa4373e3/md.webp" \
-  http://localhost:8000/generate-image-from-url \
-  --output resultado_carabineros.png
 ```
 
 ### Ejemplo 2: Noticia de Combarbalá
@@ -122,8 +147,7 @@ curl -X POST \
   -F "headline=Terror en Combarbalá: Sujeto intenta estrangular a su pareja con un alargador" \
   -F "highlight=intenta estrangular a su pareja" \
   -F "image_url=https://diarioeldia-s3.cdn.net.ar/s3i233/2025/10/diarioeldia/images/02/31/23/2312342_75083517659dc319fb47d1ab8d1e34cf045cf83ab0722e782cf72d14e44adf98/md.webp" \
-  http://localhost:8000/generate-image-from-url \
-  --output resultado_combarbala.png
+  http://localhost:8000/generate-image-from-url
 ```
 
 ## Características Técnicas
