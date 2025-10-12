@@ -389,14 +389,21 @@ def _create_composite_image(
         bold_baseline = bold_bbox[3]  # bottom of bold font
         baseline_offset = regular_baseline - bold_baseline
         
+        # Calculate vertical centering - get actual text height
+        text_bbox = draw_dummy.textbbox((0, 0), line_text, font=font_reg)
+        actual_text_height = text_bbox[3] - text_bbox[1]
+        
+        # Center text vertically in the box
+        text_y_offset = (box_h - actual_text_height) // 2
+        
         for char_idx, char in enumerate(line_text):
             # Check if this character is highlighted
             is_highlighted = char_idx < len(line_highlights) and line_highlights[char_idx]
             color = highlight_color if is_highlighted else text_color
             font = font_bold if is_highlighted else font_reg
             
-            # Adjust Y position for bold text to align with regular text
-            y_position = padding_y + (baseline_offset if is_highlighted else 0)
+            # Adjust Y position for bold text to align with regular text + vertical centering
+            y_position = text_y_offset + (baseline_offset if is_highlighted else 0)
             
             # Draw the character
             box_draw.text((text_x, y_position), char, font=font, fill=color)
