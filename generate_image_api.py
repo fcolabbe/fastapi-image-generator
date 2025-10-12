@@ -194,8 +194,8 @@ def _create_composite_image(
     # Determine sizes for fonts relative to image height
     # Para Instagram usamos fuentes más pequeñas para mejor distribución del texto
     if instagram_format:
-        main_font_size = max(12, int(height * 0.045))  # 25% más pequeño para Instagram
-        side_font_size = max(8, int(height * 0.025))
+        main_font_size = max(12, int(height * 0.038))  # 37% más pequeño para Instagram
+        side_font_size = max(8, int(height * 0.022))
     else:
         main_font_size = max(12, int(height * 0.06))  # tamaño normal para horizontal
         side_font_size = max(8, int(height * 0.03))
@@ -206,7 +206,11 @@ def _create_composite_image(
     font_side = _load_font(side_font_size, bold=False)
 
     # Prepare watermark along the left side
-    bar_width = int(width * 0.07)
+    # Para Instagram usamos barra lateral más delgada para más espacio de texto
+    if instagram_format:
+        bar_width = int(width * 0.05)  # Barra más delgada en Instagram
+    else:
+        bar_width = int(width * 0.07)  # Barra normal en horizontal
     # Create a temporary image for rendering horizontal watermark text
     temp = Image.new('RGBA', (height, bar_width), (0, 0, 0, 0))
     draw_temp = ImageDraw.Draw(temp)
