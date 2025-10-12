@@ -220,6 +220,16 @@ def _create_composite_image(
     # Word-based wrapping that preserves exact highlight positions and doesn't cut words
     def wrap_text_with_highlights(text, highlight_mask, font, max_width):
         """Wrap text by words while preserving exact character-level highlight information."""
+        
+        def calculate_real_width(text_str, highlights_list):
+            """Calculate the REAL width as it will be drawn, char by char with correct fonts."""
+            total_width = 0
+            for i, char in enumerate(text_str):
+                is_highlighted = i < len(highlights_list) and highlights_list[i]
+                char_font = font_bold if is_highlighted else font_reg
+                total_width += draw_dummy.textlength(char, font=char_font)
+            return total_width
+        
         lines = []
         words = text.split()  # Split by whitespace
         
@@ -248,14 +258,11 @@ def _create_composite_image(
                 candidate_text = word
                 candidate_highlights = word_highlight_chars
             
-            # Check if candidate fits - calculate with both fonts to be safe
-            # Use bold font for conservative measurement
-            candidate_width_bold = draw_dummy.textlength(candidate_text, font=font_bold)
-            # Also check with regular font and add safety margin
-            candidate_width_reg = draw_dummy.textlength(candidate_text, font=font_reg)
-            candidate_width = max(candidate_width_bold, candidate_width_reg) * 1.1  # 10% safety margin
+            # Calculate REAL width as it will be rendered
+            candidate_width = calculate_real_width(candidate_text, candidate_highlights)
             
-            if candidate_width <= max_width * 0.85:  # Very conservative margin
+            # Be VERY conservative - use 80% of available width with safety margin
+            if candidate_width * 1.15 <= max_width:  # 15% safety margin
                 current_line_words.append(word)
                 if current_line_highlights:
                     current_line_highlights.append(False)  # Add space highlight
@@ -280,8 +287,8 @@ def _create_composite_image(
         
         return lines
     
-    # Wrap the headline with variable line widths - be very conservative to avoid cutting words
-    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * 0.65)
+    # Wrap the headline with variable line widths - calculate real width char by char
+    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * 0.85)
     
     # Calculate dimensions for each line
     padding_x = 20
