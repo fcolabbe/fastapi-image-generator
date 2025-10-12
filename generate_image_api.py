@@ -248,10 +248,14 @@ def _create_composite_image(
                 candidate_text = word
                 candidate_highlights = word_highlight_chars
             
-            # Check if candidate fits - use bold font and be very conservative
-            candidate_width = draw_dummy.textlength(candidate_text, font=font_bold)
+            # Check if candidate fits - calculate with both fonts to be safe
+            # Use bold font for conservative measurement
+            candidate_width_bold = draw_dummy.textlength(candidate_text, font=font_bold)
+            # Also check with regular font and add safety margin
+            candidate_width_reg = draw_dummy.textlength(candidate_text, font=font_reg)
+            candidate_width = max(candidate_width_bold, candidate_width_reg) * 1.1  # 10% safety margin
             
-            if candidate_width <= max_width * 0.90:  # Extra conservative margin
+            if candidate_width <= max_width * 0.85:  # Very conservative margin
                 current_line_words.append(word)
                 if current_line_highlights:
                     current_line_highlights.append(False)  # Add space highlight
@@ -277,7 +281,7 @@ def _create_composite_image(
         return lines
     
     # Wrap the headline with variable line widths - be very conservative to avoid cutting words
-    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * 0.70)
+    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * 0.65)
     
     # Calculate dimensions for each line
     padding_x = 20
