@@ -297,9 +297,23 @@ def _create_composite_image(
     line_heights = []
     line_widths = []
     
-    for line_text, _ in wrapped_lines:
+    # Helper function to calculate real width char by char (same logic as in wrapping)
+    def calculate_line_real_width(text_str, highlights_list):
+        """Calculate the REAL width as it will be drawn, char by char with correct fonts."""
+        total_width = 0
+        for i, char in enumerate(text_str):
+            is_highlighted = i < len(highlights_list) and highlights_list[i]
+            char_font = font_bold if is_highlighted else font_reg
+            total_width += draw_dummy.textlength(char, font=char_font)
+        return total_width
+    
+    for line_text, line_highlights in wrapped_lines:
+        # Calculate REAL width considering bold and regular characters
+        real_width = calculate_line_real_width(line_text, line_highlights)
+        line_widths.append(real_width)
+        
+        # Height can use regular font as reference
         bbox = draw_dummy.textbbox((0, 0), line_text, font=font_reg)
-        line_widths.append(bbox[2] - bbox[0])
         line_heights.append(bbox[3] - bbox[1])
     
     # Calculate total height
