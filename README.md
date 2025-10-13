@@ -92,6 +92,9 @@ La API ahora genera automáticamente **AMBAS versiones** (horizontal para web/Fa
 - **highlight**: El texto que se destacará (debe estar contenido en el headline)
 - **image**: Archivo de imagen local (para endpoint `/generate-image`)
 - **image_url**: URL de la imagen (para endpoint `/generate-image-from-url`)
+- **recorte** *(opcional)*: ROI para recorte Instagram como "x,y,w,h" en valores 0..1
+  - Ejemplo: `"0.14,0,0.72,1"` (recorta 14% izquierda, mantiene 72% ancho, altura completa)
+  - Si no se especifica, usa recorte centrado automático
 
 ## Formatos Generados
 
@@ -149,6 +152,24 @@ curl -X POST \
   -F "image_url=https://diarioeldia-s3.cdn.net.ar/s3i233/2025/10/diarioeldia/images/02/31/23/2312342_75083517659dc319fb47d1ab8d1e34cf045cf83ab0722e782cf72d14e44adf98/md.webp" \
   http://localhost:8000/generate-image-from-url
 ```
+
+### Ejemplo 3: Con recorte personalizado para Instagram
+```bash
+curl -X POST \
+  -F "headline=Mundial Sub-20: Francia vence a Noruega en un partido emocionante" \
+  -F "highlight=Francia vence a Noruega" \
+  -F "image_url=https://ejemplo.com/mundial-sub-20-francia-noruega.webp" \
+  -F "recorte=0.14,0,0.72,1" \
+  http://localhost:8000/generate-image-from-url
+```
+
+**Explicación del recorte `0.14,0,0.72,1`:**
+- `0.14` = x: empieza al 14% desde la izquierda (recorta barra lateral izquierda)
+- `0` = y: empieza desde arriba (sin recorte superior)
+- `0.72` = w: ancho del 72% de la imagen original
+- `1` = h: altura completa (100%)
+
+Este recorte es ideal para imágenes con barras laterales o elementos no deseados en los bordes.
 
 ## Características Técnicas
 

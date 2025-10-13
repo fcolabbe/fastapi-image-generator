@@ -118,6 +118,68 @@ def _load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
         return ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", size)
 
 
+def _crop_to_4x5(
+    img: Image.Image,
+    rel_box: Optional[tuple[float, float, float, float]] = None,
+    anchor: str = "center"
+) -> Image.Image:
+    """
+    Crop an image to exact 4:5 ratio within a given ROI.
+    
+    Args:
+        img: PIL Image to crop
+        rel_box: Optional (x, y, w, h) relative coordinates (0..1)
+        anchor: "center", "topleft", or "top" for positioning within ROI
+    
+    Returns:
+        Cropped PIL Image in 4:5 ratio
+    """
+    RatioW, RatioH = 4, 5
+    W, H = img.size
+    
+    # Define ROI
+    if rel_box is not None:
+        x = int(round(rel_box[0] * W))
+        y = int(round(rel_box[1] * H))
+        w = int(round(rel_box[2] * W))
+        h = int(round(rel_box[3] * H))
+        roi = (x, y, w, h)
+    else:
+        roi = (0, 0, W, H)
+    
+    x0, y0, rw, rh = roi
+    x0 = max(0, min(x0, W-1))
+    y0 = max(0, min(y0, H-1))
+    rw = max(1, min(rw, W - x0))
+    rh = max(1, min(rh, H - y0))
+    
+    # Compute 4:5 box dimensions
+    target_w_from_h = (RatioW / RatioH) * rh
+    if target_w_from_h <= rw:
+        tw = int(round(target_w_from_h))
+        th = int(round((RatioH / RatioW) * tw))
+    else:
+        tw = rw
+        th = int(round((RatioH / RatioW) * tw))
+        if th > rh:
+            tw = int(round((RatioW / RatioH) * rh))
+            th = int(round((RatioH / RatioW) * tw))
+    
+    # Position inside ROI
+    if anchor == "topleft":
+        cx, cy = x0, y0
+    elif anchor == "top":
+        cx = x0 + (rw - tw) // 2
+        cy = y0
+    else:  # center
+        cx = x0 + (rw - tw) // 2
+        cy = y0 + (rh - th) // 2
+    
+    # Crop and resize to 1080x1350
+    crop = img.crop((cx, cy, cx + tw, cy + th))
+    return crop.resize((1080, 1350), Image.Resampling.LANCZOS)
+
+
 def _create_composite_image(
     base_image: Image.Image,
     headline: str,
@@ -130,6 +192,7 @@ def _create_composite_image(
     box_color: tuple[int, int, int, int] = (255, 255, 255, 230),
     logo_scale: float = 0.10,
     instagram_format: bool = False,
+    recorte: Optional[str] = None,
 ) -> Image.Image:
     """Compose a new image by drawing text and a logo over a base photograph.
 
@@ -166,28 +229,19 @@ def _create_composite_image(
     
     # Resize para formato Instagram 4:5 (1080x1350) si es necesario
     if instagram_format:
-        target_width = 1080
-        target_height = 1350
+        # Parse recorte parameter si existe (formato: "x,y,w,h" en valores 0..1)
+        rel_box = None
+        if recorte:
+            try:
+                parts = [float(v.strip()) for v in recorte.split(",")]
+                if len(parts) == 4:
+                    rel_box = tuple(parts)
+            except (ValueError, AttributeError):
+                # Si hay error en el formato, usar recorte centrado por defecto
+                pass
         
-        # Calcular recorte centrado
-        aspect_ratio = img.width / img.height
-        target_ratio = target_width / target_height
-        
-        if aspect_ratio > target_ratio:
-            # Imagen más ancha, recortar los lados
-            new_height = img.height
-            new_width = int(new_height * target_ratio)
-            left = (img.width - new_width) // 2
-            img = img.crop((left, 0, left + new_width, new_height))
-        else:
-            # Imagen más alta, recortar arriba/abajo
-            new_width = img.width
-            new_height = int(new_width / target_ratio)
-            top = (img.height - new_height) // 2
-            img = img.crop((0, top, new_width, top + new_height))
-        
-        # Resize al tamaño objetivo
-        img = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+        # Usar la función de recorte 4:5 avanzada
+        img = _crop_to_4x5(img, rel_box=rel_box, anchor="center")
     
     width, height = img.size
 
@@ -431,7 +485,8 @@ async def generate_image(
     headline: str = Form(..., description="Full headline to display."),
     highlight: str = Form(..., description="Substring of the headline to highlight."),
     image: UploadFile = File(..., description="Base photograph (PNG/JPEG)."),
-    logo: Optional[UploadFile] = File(None, description="Optional logo file to override the default.")
+    logo: Optional[UploadFile] = File(None, description="Optional logo file to override the default."),
+    recorte: Optional[str] = Form(None, description="ROI for Instagram crop as 'x,y,w,h' (0..1), e.g., '0.14,0,0.72,1'")
 ):
     """Generate a composite image from user-supplied headline, highlight and photograph.
 
@@ -469,6 +524,7 @@ async def generate_image(
         highlight=highlight,
         logo_image=logo_img,
         instagram_format=False,
+        recorte=None,
     )
     
     # Generate the Instagram vertical version (4:5)
@@ -478,6 +534,7 @@ async def generate_image(
         highlight=highlight,
         logo_image=logo_img,
         instagram_format=True,
+        recorte=recorte,
     )
     
     # Save both images and get public URLs
@@ -516,7 +573,8 @@ async def generate_image_from_url(
     headline: str = Form(..., description="Full headline to display."),
     highlight: str = Form(..., description="Substring of the headline to highlight."),
     image_url: str = Form(..., description="URL of the base photograph."),
-    logo_url: Optional[str] = Form(None, description="Optional URL of a custom logo file.")
+    logo_url: Optional[str] = Form(None, description="Optional URL of a custom logo file."),
+    recorte: Optional[str] = Form(None, description="ROI for Instagram crop as 'x,y,w,h' (0..1), e.g., '0.14,0,0.72,1'")
 ):
     """Generate a composite image from user-supplied headline, highlight and image URL.
 
@@ -562,6 +620,7 @@ async def generate_image_from_url(
         highlight=highlight,
         logo_image=logo_img,
         instagram_format=False,
+        recorte=None,
     )
     
     # Generate the Instagram vertical version (4:5)
@@ -571,6 +630,7 @@ async def generate_image_from_url(
         highlight=highlight,
         logo_image=logo_img,
         instagram_format=True,
+        recorte=recorte,
     )
     
     # Save both images and get public URLs
