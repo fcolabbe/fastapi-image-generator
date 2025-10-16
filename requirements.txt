@@ -3,6 +3,10 @@ uvicorn==0.24.0
 pillow==10.1.0
 requests==2.31.0
 python-multipart==0.0.6
-moviepy==1.0.3
-opencv-python==4.8.1.78
-numpy==1.24.3
+numpy>=1.26.0
+opencv-python>=4.8.0
+decorator>=4.4.2
+imageio>=2.31.0
+imageio-ffmpeg>=0.4.9
+proglog>=0.1.10
+tqdm>=4.66.0

@@ -6,7 +6,7 @@ Generates cinematic videos from images with text overlays
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from moviepy.editor import VideoClip
+import imageio
 from typing import Optional, Tuple
 import platform
 
@@ -247,7 +247,8 @@ def create_text_overlay(
     return np.array(overlay)
 
 
-def make_pan_scan_clip(
+def make_pan_scan_video(
+    output_path: str,
     image_input,  # Can be path (str) or PIL Image
     headline: Optional[str] = None,
     highlight: Optional[str] = None,
@@ -261,9 +262,10 @@ def make_pan_scan_clip(
     ease_in_out: bool = True,
 ):
     """
-    Build a MoviePy VideoClip with cinematic Pan & Scan effect.
+    Generate a video file with cinematic Pan & Scan effect.
     
     Args:
+        output_path: Path where to save the video file
         image_input: Image path (str) or PIL Image object
         headline: Text headline to overlay
         highlight: Part of headline to highlight in bold/color
@@ -306,7 +308,13 @@ def make_pan_scan_clip(
     # Create static text overlay
     text_overlay = create_text_overlay(out_w, out_h, headline, highlight)
     
-    def make_frame(t: float) -> np.ndarray:
+    # Calculate total frames
+    total_frames = int(duration * fps)
+    
+    # Generate all frames
+    frames = []
+    for frame_num in range(total_frames):
+        t = frame_num / fps
         p = t / duration
         
         if ease_in_out:
@@ -358,8 +366,17 @@ def make_pan_scan_clip(
         # Apply text overlay
         frame = apply_overlay(frame, text_overlay)
         
-        return frame[:, :, ::-1]  # BGR→RGB for MoviePy
+        # Convert BGR to RGB
+        frame_rgb = frame[:, :, ::-1]
+        frames.append(frame_rgb)
     
-    clip = VideoClip(make_frame, duration=duration).set_fps(fps)
-    return clip
+    # Write video using imageio with ffmpeg
+    imageio.mimsave(
+        output_path,
+        frames,
+        fps=fps,
+        codec='libx264',
+        pixelformat='yuv420p',
+        output_params=['-crf', '23', '-preset', 'medium']
+    )
 

@@ -47,7 +47,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 # Importar configuración
 from config import BASE_URL, PUBLIC_IMAGES_DIR, APP_NAME, APP_DESCRIPTION
-from video_generator import make_pan_scan_clip
+from video_generator import make_pan_scan_video
 
 app = FastAPI(title=APP_NAME, description=APP_DESCRIPTION)
 
@@ -734,7 +734,11 @@ async def generate_video_from_url(
     
     # Generate video
     try:
-        clip = make_pan_scan_clip(
+        # Save to temp file first
+        temp_path = f"/tmp/video_{uuid.uuid4()}.mp4"
+        
+        make_pan_scan_video(
+            output_path=temp_path,
             image_input=base_img,
             headline=headline,
             highlight=highlight,
@@ -745,17 +749,6 @@ async def generate_video_from_url(
             direction=direction,
             ease_in_out=True
         )
-        
-        # Save to temp file first
-        temp_path = f"/tmp/video_{uuid.uuid4()}.mp4"
-        clip.write_videofile(
-            temp_path,
-            codec='libx264',
-            audio=False,
-            preset='medium',
-            ffmpeg_params=['-crf', '23']
-        )
-        clip.close()
         
         # Move to public directory and get URL
         video_url = _save_video_and_get_url(temp_path)
