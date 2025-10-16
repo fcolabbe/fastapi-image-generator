@@ -40,8 +40,9 @@ sudo $APP_DIR/venv/bin/pip install -r requirements.txt
 # Crear directorio de logs si no existe
 sudo mkdir -p /var/log/pm2
 
-# Crear directorio para imágenes públicas
+# Crear directorios para archivos públicos (imágenes y videos)
 sudo mkdir -p $APP_DIR/public/images
+sudo mkdir -p $APP_DIR/public/videos
 
 # Configurar permisos
 echo "🔐 Configurando permisos..."

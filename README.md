@@ -171,6 +171,60 @@ curl -X POST \
 
 Este recorte es ideal para imágenes con barras laterales o elementos no deseados en los bordes.
 
+## Generación de Videos
+
+### Endpoint: `/generate-video-from-url`
+
+Genera videos en formato 9:16 (1080x1920) con efecto pan & scan cinematográfico:
+
+```bash
+curl -X POST \
+  -F "headline=Cambio de mando en Carabineros: General Christian Brebi asume como nuevo Jefe" \
+  -F "highlight=General Christian Brebi" \
+  -F "image_url=https://ejemplo.com/imagen.jpg" \
+  -F "duration=5.0" \
+  -F "direction=left-to-right" \
+  -F "fps=30" \
+  http://localhost:8000/generate-video-from-url
+```
+
+**Parámetros del video:**
+- **duration**: Duración en segundos (1-30, default: 5.0)
+- **direction**: Dirección del efecto pan & scan
+  - `left-to-right`: Panorámica de izquierda a derecha
+  - `right-to-left`: Panorámica de derecha a izquierda
+  - `top-to-bottom`: Panorámica de arriba a abajo
+  - `bottom-to-top`: Panorámica de abajo a arriba
+  - `zoom-in`: Zoom hacia el centro
+  - `zoom-out`: Zoom desde el centro
+  - `diagonal-tl-br`: Diagonal top-left a bottom-right
+  - `diagonal-tr-bl`: Diagonal top-right a bottom-left
+- **fps**: Cuadros por segundo (default: 30)
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "video_url": "https://thumbnail.shortenqr.com/public/videos/video_20250110_150000_abc123.mp4",
+  "headline": "Cambio de mando en Carabineros: General Christian Brebi asume como nuevo Jefe",
+  "highlight": "General Christian Brebi",
+  "duration": 5.0,
+  "direction": "left-to-right",
+  "fps": 30,
+  "format": "9:16",
+  "dimensions": "1080x1920",
+  "timestamp": "2025-01-10T15:00:01.123Z"
+}
+```
+
+**Características del video:**
+- ✅ Formato vertical 9:16 optimizado para Instagram Stories/Reels
+- ✅ Efecto pan & scan cinematográfico sobre la imagen
+- ✅ Texto overlay estático (no se mueve con la imagen)
+- ✅ Mismos estilos de texto que las imágenes generadas
+- ✅ Movimiento suave con easing
+- ✅ Codec H.264 optimizado para web
+
 ## Características Técnicas
 
 ### Wrapping Inteligente
