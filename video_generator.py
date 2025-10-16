@@ -173,75 +173,172 @@ def create_text_overlay(
     vertical_img = temp.rotate(90, expand=True)
     overlay.paste(vertical_img, (0, 0), vertical_img)
     
-    # Process text with highlights (simplified version)
+    # Process text with highlights (EXACT SAME LOGIC as generate_image_api.py)
     available_width = width - bar_width - 10
+    draw_dummy = ImageDraw.Draw(Image.new('RGB', (10, 10)))
     
-    # Simple word wrapping (without cutting words)
-    words = headline.split()
-    lines = []
-    current_line = []
+    # Create a character-by-character map of which characters are highlighted
+    highlight_mask = [False] * len(headline)
+    if highlight and highlight in headline:
+        highlight_start = headline.find(highlight)
+        highlight_end = highlight_start + len(highlight)
+        for i in range(highlight_start, highlight_end):
+            if i < len(headline):
+                highlight_mask[i] = True
     
-    for word in words:
-        test_line = " ".join(current_line + [word])
-        bbox = draw.textbbox((0, 0), test_line, font=font_reg)
-        test_width = bbox[2] - bbox[0]
+    # Word-based wrapping that preserves exact highlight positions and doesn't cut words
+    def wrap_text_with_highlights(text, highlight_mask, font, max_width):
+        """Wrap text by words while preserving exact character-level highlight information."""
         
-        if test_width <= available_width * 0.90:
-            current_line.append(word)
-        else:
-            if current_line:
-                lines.append(" ".join(current_line))
-            current_line = [word]
+        def calculate_real_width(text_str, highlights_list):
+            """Calculate the REAL width as it will be drawn, char by char with correct fonts."""
+            total_width = 0
+            for i, char in enumerate(text_str):
+                is_highlighted = i < len(highlights_list) and highlights_list[i]
+                char_font = font_bold if is_highlighted else font_reg
+                total_width += draw_dummy.textlength(char, font=char_font)
+            return total_width
+        
+        lines = []
+        words = text.split()  # Split by whitespace
+        
+        current_line_words = []
+        current_line_highlights = []
+        char_position = 0
+        
+        for word in words:
+            # Find the word's position in the original text
+            word_start = text.find(word, char_position)
+            word_end = word_start + len(word)
+            
+            # Get highlight info for this word
+            word_highlight_chars = []
+            for i in range(word_start, word_end):
+                if i < len(highlight_mask):
+                    word_highlight_chars.append(highlight_mask[i])
+                else:
+                    word_highlight_chars.append(False)
+            
+            # Build candidate line with proper spacing
+            if current_line_words:
+                candidate_text = " ".join(current_line_words + [word])
+                candidate_highlights = current_line_highlights + [False] + word_highlight_chars  # False for space
+            else:
+                candidate_text = word
+                candidate_highlights = word_highlight_chars
+            
+            # Calculate REAL width as it will be rendered
+            candidate_width = calculate_real_width(candidate_text, candidate_highlights)
+            
+            # Be VERY conservative - use 80% of available width with safety margin
+            if candidate_width * 1.15 <= max_width:  # 15% safety margin
+                current_line_words.append(word)
+                if current_line_highlights:
+                    current_line_highlights.append(False)  # Add space highlight
+                current_line_highlights.extend(word_highlight_chars)
+            else:
+                # Line is full, save it and start new line
+                if current_line_words:
+                    line_text = " ".join(current_line_words)
+                    lines.append((line_text, current_line_highlights))
+                
+                # Start new line with current word
+                current_line_words = [word]
+                current_line_highlights = word_highlight_chars
+            
+            # Update character position
+            char_position = word_end
+        
+        # Add the last line
+        if current_line_words:
+            line_text = " ".join(current_line_words)
+            lines.append((line_text, current_line_highlights))
+        
+        return lines
     
-    if current_line:
-        lines.append(" ".join(current_line))
+    # Wrap the headline with variable line widths - calculate real width char by char
+    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * 0.85)
     
-    # Calculate text position (centered vertically)
+    # Calculate dimensions for each line
     padding_x = 20
     padding_y = 10
     line_spacing = 8
-    line_height = font_reg.getbbox('Ay')[3]
-    total_height = len(lines) * (line_height + 2 * padding_y + line_spacing)
-    start_y = (height - total_height) // 2
+    line_heights = []
+    line_widths = []
     
-    # Draw text boxes
+    # Helper function to calculate real width char by char (same logic as in wrapping)
+    def calculate_line_real_width(text_str, highlights_list):
+        """Calculate the REAL width as it will be drawn, char by char with correct fonts."""
+        total_width = 0
+        for i, char in enumerate(text_str):
+            is_highlighted = i < len(highlights_list) and highlights_list[i]
+            char_font = font_bold if is_highlighted else font_reg
+            total_width += draw_dummy.textlength(char, font=char_font)
+        return total_width
+    
+    for line_text, line_highlights in wrapped_lines:
+        # Calculate REAL width considering bold and regular characters
+        real_width = calculate_line_real_width(line_text, line_highlights)
+        line_widths.append(real_width)
+        
+        # Height can use regular font as reference
+        bbox = draw_dummy.textbbox((0, 0), line_text, font=font_reg)
+        line_heights.append(bbox[3] - bbox[1])
+    
+    # Calculate total height
+    total_boxes_height = sum(h + 2 * padding_y for h in line_heights)
+    total_boxes_height += line_spacing * (len(wrapped_lines) - 1)
+    start_y = height - total_boxes_height - 20
     current_y = start_y
     
-    for line_text in lines:
-        # Calculate line dimensions
-        bbox = draw.textbbox((0, 0), line_text, font=font_reg)
-        text_w = bbox[2] - bbox[0]
-        text_h = bbox[3] - bbox[1]
+    # Draw each line with variable width and centered
+    for idx, (line_text, line_highlights) in enumerate(wrapped_lines):
+        text_w = line_widths[idx]
+        text_h = line_heights[idx]
         box_w = text_w + 2 * padding_x
         box_h = text_h + 2 * padding_y
         
-        # Center horizontally
+        # Center each line individually within the available space
         x = bar_width + (available_width - box_w) // 2
         y = current_y
         
         # Draw box
         draw.rectangle([x, y, x + box_w, y + box_h], fill=box_color)
         
-        # Draw text with highlights
+        # Draw text character by character with appropriate colors and fonts
         text_x = x + padding_x
-        text_y = y + padding_y
         
-        if highlight and highlight in line_text:
-            # Split and draw with highlight
-            parts = line_text.split(highlight)
-            for i, part in enumerate(parts):
-                if i > 0:
-                    # Draw highlight
-                    draw.text((text_x, text_y), highlight, font=font_bold, fill=highlight_color)
-                    text_x += draw.textlength(highlight, font=font_bold)
-                # Draw regular part
-                if part:
-                    draw.text((text_x, text_y), part, font=font_reg, fill=text_color)
-                    text_x += draw.textlength(part, font=font_reg)
-        else:
-            # Draw regular text
-            draw.text((text_x, text_y), line_text, font=font_reg, fill=text_color)
+        # Calculate baseline offset to align bold and regular text
+        regular_bbox = draw_dummy.textbbox((0, 0), "Ay", font=font_reg)
+        bold_bbox = draw_dummy.textbbox((0, 0), "Ay", font=font_bold)
+        regular_baseline = regular_bbox[3]  # bottom of regular font
+        bold_baseline = bold_bbox[3]  # bottom of bold font
+        baseline_offset = regular_baseline - bold_baseline
         
+        # Calculate vertical centering - get actual text height
+        text_bbox = draw_dummy.textbbox((0, 0), line_text, font=font_reg)
+        actual_text_height = text_bbox[3] - text_bbox[1]
+        
+        # Center text vertically in the box
+        text_y_offset = y + padding_y + (box_h - 2 * padding_y - actual_text_height) // 2
+        
+        for char_idx, char in enumerate(line_text):
+            # Check if this character is highlighted
+            is_highlighted = char_idx < len(line_highlights) and line_highlights[char_idx]
+            color = highlight_color if is_highlighted else text_color
+            font = font_bold if is_highlighted else font_reg
+            
+            # Adjust Y position for bold text to align with regular text + vertical centering
+            y_position = text_y_offset + (baseline_offset if is_highlighted else 0)
+            
+            # Draw the character
+            draw.text((text_x, y_position), char, font=font, fill=color)
+            
+            # Move x position (use the correct font for width calculation)
+            char_width = draw_dummy.textlength(char, font=font)
+            text_x += char_width
+        
+        # Move to next line
         current_y += box_h + line_spacing
     
     return np.array(overlay)
