@@ -368,14 +368,15 @@ def make_pan_scan_video(
     headline: Optional[str] = None,
     highlight: Optional[str] = None,
     duration: float = 5.0,
-    out_w: int = 1080,
-    out_h: int = 1920,
+    out_w: Optional[int] = None,
+    out_h: Optional[int] = None,
     fps: int = 30,
     direction: str = "left-to-right",
     zoom_start: float = 1.0,
     zoom_end: float = 1.0,
     ease_in_out: bool = True,
     audio_path: Optional[str] = None,
+    keep_aspect: bool = True,
 ):
     """
     Generate a video file with cinematic Pan & Scan effect.
@@ -386,8 +387,8 @@ def make_pan_scan_video(
         headline: Text headline to overlay
         highlight: Part of headline to highlight in bold/color
         duration: Video duration in seconds (si hay audio, se ajusta a la duración del audio)
-        out_w: Output video width (default 1080 for 9:16)
-        out_h: Output video height (default 1920 for 9:16)
+        out_w: Output video width (None = usar ancho original)
+        out_h: Output video height (None = usar alto original)
         fps: Frames per second
         direction: Pan direction
             - "left-to-right", "right-to-left"
@@ -399,6 +400,7 @@ def make_pan_scan_video(
         ease_in_out: Apply smooth easing
         audio_path: Optional path to audio file (mp3, wav, etc.)
             Si se proporciona, la duración del video se ajusta a la del audio
+        keep_aspect: Si True, mantiene el aspecto original de la imagen (ignora out_w/out_h)
     """
     # Si hay audio, ajustar la duración del video a la duración del audio
     if audio_path:
@@ -408,6 +410,15 @@ def make_pan_scan_video(
             print(f"📏 Ajustando duración del video a {duration:.2f}s (duración del audio)")
     
     base = load_image_cv2(image_input)
+    
+    # Si keep_aspect es True, usar dimensiones originales de la imagen
+    if keep_aspect:
+        out_h, out_w = base.shape[:2]
+        print(f"📐 Manteniendo aspecto original: {out_w}x{out_h}")
+    elif out_w is None or out_h is None:
+        # Si no se especifican dimensiones, usar las originales
+        out_h, out_w = base.shape[:2]
+        print(f"📐 Usando dimensiones originales: {out_w}x{out_h}")
     
     # Calculate margins based on direction
     if direction in ["left-to-right", "right-to-left"]:

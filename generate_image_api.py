@@ -692,7 +692,8 @@ async def generate_video_from_url(
     duration: float = Form(5.0, description="Video duration in seconds (default: 5.0)"),
     direction: str = Form("left-to-right", description="Pan direction: left-to-right, right-to-left, top-to-bottom, bottom-to-top, zoom-in, zoom-out, diagonal-tl-br, diagonal-tr-bl"),
     fps: int = Form(30, description="Frames per second (default: 30)"),
-    audio: Optional[UploadFile] = File(None, description="Optional audio file (mp3, wav, etc.)")
+    audio: Optional[UploadFile] = File(None, description="Optional audio file (mp3, wav, etc.)"),
+    keep_aspect: bool = Form(True, description="Keep original image aspect ratio (default: True)")
 ):
     """Generate a cinematic pan & scan video from image URL.
     
@@ -763,17 +764,40 @@ async def generate_video_from_url(
             headline=headline,
             highlight=highlight,
             duration=actual_duration,
-            out_w=1080,
-            out_h=1920,
+            out_w=1080 if not keep_aspect else None,
+            out_h=1920 if not keep_aspect else None,
             fps=fps,
             direction=direction,
             ease_in_out=True,
-            audio_path=audio_path
+            audio_path=audio_path,
+            keep_aspect=keep_aspect
         )
         
         # Clean up temp audio file if exists
         if audio_path and os.path.exists(audio_path):
             os.remove(audio_path)
+        
+        # Get video dimensions before moving the file
+        import subprocess
+        try:
+            cmd = [
+                'ffprobe', '-v', 'error',
+                '-select_streams', 'v:0',
+                '-show_entries', 'stream=width,height',
+                '-of', 'csv=p=0',
+                temp_path
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                w, h = result.stdout.strip().split(',')
+                video_dimensions = f"{w}x{h}"
+                aspect = f"{w}:{h}" if keep_aspect else "9:16"
+            else:
+                video_dimensions = "unknown"
+                aspect = "unknown"
+        except:
+            video_dimensions = "unknown"
+            aspect = "unknown"
         
         # Move to public directory and get URL
         video_url = _save_video_and_get_url(temp_path)
@@ -786,8 +810,9 @@ async def generate_video_from_url(
             "duration": actual_duration,
             "direction": direction,
             "fps": fps,
-            "format": "9:16",
-            "dimensions": "1080x1920",
+            "format": aspect,
+            "dimensions": video_dimensions,
+            "keep_aspect": keep_aspect,
             "has_audio": audio_path is not None,
             "timestamp": datetime.now().isoformat()
         }
