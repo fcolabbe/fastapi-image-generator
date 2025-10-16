@@ -200,6 +200,7 @@ curl -X POST \
   - `diagonal-tl-br`: Diagonal top-left a bottom-right
   - `diagonal-tr-bl`: Diagonal top-right a bottom-left
 - **fps**: Cuadros por segundo (default: 30)
+- **audio** *(opcional)*: Archivo de audio (mp3, wav, etc.) para agregar al video
 
 **Respuesta:**
 ```json
@@ -224,6 +225,22 @@ curl -X POST \
 - ✅ Mismos estilos de texto que las imágenes generadas
 - ✅ Movimiento suave con easing
 - ✅ Codec H.264 optimizado para web
+- ✅ Soporte para audio (mp3, wav, aac, etc.)
+
+### Ejemplo con audio:
+
+```bash
+curl -X POST \
+  -F "headline=Tu titular aquí" \
+  -F "highlight=texto destacado" \
+  -F "image_url=https://ejemplo.com/imagen.jpg" \
+  -F "duration=5.0" \
+  -F "direction=zoom-in" \
+  -F "audio=@/ruta/a/tu/audio.mp3" \
+  http://localhost:8000/generate-video-from-url
+```
+
+El audio se ajustará automáticamente a la duración del video. Si el audio es más largo, se cortará; si es más corto, el video continuará sin audio.
 
 ## Características Técnicas
 

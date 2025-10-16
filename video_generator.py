@@ -260,6 +260,7 @@ def make_pan_scan_video(
     zoom_start: float = 1.0,
     zoom_end: float = 1.0,
     ease_in_out: bool = True,
+    audio_path: Optional[str] = None,
 ):
     """
     Generate a video file with cinematic Pan & Scan effect.
@@ -281,6 +282,7 @@ def make_pan_scan_video(
         zoom_start: Initial zoom level
         zoom_end: Final zoom level
         ease_in_out: Apply smooth easing
+        audio_path: Optional path to audio file (mp3, wav, etc.)
     """
     base = load_image_cv2(image_input)
     
@@ -371,12 +373,59 @@ def make_pan_scan_video(
         frames.append(frame_rgb)
     
     # Write video using imageio with ffmpeg
-    imageio.mimsave(
-        output_path,
-        frames,
-        fps=fps,
-        codec='libx264',
-        pixelformat='yuv420p',
-        output_params=['-crf', '23', '-preset', 'medium']
-    )
+    if audio_path:
+        # Si hay audio, primero guardamos el video sin audio
+        temp_video_path = output_path.replace('.mp4', '_temp.mp4')
+        imageio.mimsave(
+            temp_video_path,
+            frames,
+            fps=fps,
+            codec='libx264',
+            pixelformat='yuv420p',
+            output_params=['-crf', '23', '-preset', 'medium']
+        )
+        
+        # Luego mezclamos video con audio usando ffmpeg
+        import subprocess
+        import os
+        
+        try:
+            # Comando ffmpeg para mezclar video y audio
+            cmd = [
+                'ffmpeg',
+                '-y',  # Sobrescribir archivo de salida
+                '-i', temp_video_path,  # Video input
+                '-i', audio_path,  # Audio input
+                '-c:v', 'copy',  # Copiar video sin re-encodear
+                '-c:a', 'aac',  # Codec de audio
+                '-b:a', '192k',  # Bitrate de audio
+                '-shortest',  # Terminar cuando el stream más corto termine
+                output_path
+            ]
+            
+            subprocess.run(cmd, check=True, capture_output=True)
+            
+            # Eliminar video temporal
+            os.remove(temp_video_path)
+            
+        except subprocess.CalledProcessError as e:
+            # Si falla, renombrar el video temporal como salida
+            import shutil
+            shutil.move(temp_video_path, output_path)
+            print(f"Warning: Could not add audio. Video saved without audio: {e}")
+        except FileNotFoundError:
+            # ffmpeg no está instalado
+            import shutil
+            shutil.move(temp_video_path, output_path)
+            print("Warning: ffmpeg not found. Video saved without audio.")
+    else:
+        # Sin audio, guardar directamente
+        imageio.mimsave(
+            output_path,
+            frames,
+            fps=fps,
+            codec='libx264',
+            pixelformat='yuv420p',
+            output_params=['-crf', '23', '-preset', 'medium']
+        )
 

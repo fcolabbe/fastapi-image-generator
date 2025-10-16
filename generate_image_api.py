@@ -691,7 +691,8 @@ async def generate_video_from_url(
     image_url: str = Form(..., description="URL of the base photograph."),
     duration: float = Form(5.0, description="Video duration in seconds (default: 5.0)"),
     direction: str = Form("left-to-right", description="Pan direction: left-to-right, right-to-left, top-to-bottom, bottom-to-top, zoom-in, zoom-out, diagonal-tl-br, diagonal-tr-bl"),
-    fps: int = Form(30, description="Frames per second (default: 30)")
+    fps: int = Form(30, description="Frames per second (default: 30)"),
+    audio: Optional[UploadFile] = File(None, description="Optional audio file (mp3, wav, etc.)")
 ):
     """Generate a cinematic pan & scan video from image URL.
     
@@ -732,6 +733,17 @@ async def generate_video_from_url(
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not process downloaded image: {exc}")
     
+    # Process audio if provided
+    audio_path = None
+    if audio is not None:
+        try:
+            audio_data = await audio.read()
+            audio_path = f"/tmp/audio_{uuid.uuid4()}{os.path.splitext(audio.filename)[1]}"
+            with open(audio_path, 'wb') as f:
+                f.write(audio_data)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Could not process audio file: {exc}")
+    
     # Generate video
     try:
         # Save to temp file first
@@ -747,8 +759,13 @@ async def generate_video_from_url(
             out_h=1920,
             fps=fps,
             direction=direction,
-            ease_in_out=True
+            ease_in_out=True,
+            audio_path=audio_path
         )
+        
+        # Clean up temp audio file if exists
+        if audio_path and os.path.exists(audio_path):
+            os.remove(audio_path)
         
         # Move to public directory and get URL
         video_url = _save_video_and_get_url(temp_path)
