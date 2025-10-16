@@ -247,6 +247,24 @@ def create_text_overlay(
     return np.array(overlay)
 
 
+def get_audio_duration(audio_path: str) -> float:
+    """Get duration of audio file in seconds using ffmpeg."""
+    import subprocess
+    try:
+        cmd = [
+            'ffprobe',
+            '-v', 'error',
+            '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            audio_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return float(result.stdout.strip())
+    except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+        # Si no se puede obtener la duración, retornar None
+        return None
+
+
 def make_pan_scan_video(
     output_path: str,
     image_input,  # Can be path (str) or PIL Image
@@ -270,7 +288,7 @@ def make_pan_scan_video(
         image_input: Image path (str) or PIL Image object
         headline: Text headline to overlay
         highlight: Part of headline to highlight in bold/color
-        duration: Video duration in seconds
+        duration: Video duration in seconds (si hay audio, se ajusta a la duración del audio)
         out_w: Output video width (default 1080 for 9:16)
         out_h: Output video height (default 1920 for 9:16)
         fps: Frames per second
@@ -283,7 +301,15 @@ def make_pan_scan_video(
         zoom_end: Final zoom level
         ease_in_out: Apply smooth easing
         audio_path: Optional path to audio file (mp3, wav, etc.)
+            Si se proporciona, la duración del video se ajusta a la del audio
     """
+    # Si hay audio, ajustar la duración del video a la duración del audio
+    if audio_path:
+        audio_duration = get_audio_duration(audio_path)
+        if audio_duration:
+            duration = audio_duration
+            print(f"📏 Ajustando duración del video a {duration:.2f}s (duración del audio)")
+    
     base = load_image_cv2(image_input)
     
     # Calculate margins based on direction
@@ -391,6 +417,7 @@ def make_pan_scan_video(
         
         try:
             # Comando ffmpeg para mezclar video y audio
+            # No usamos -shortest porque el video ya tiene la duración del audio
             cmd = [
                 'ffmpeg',
                 '-y',  # Sobrescribir archivo de salida
@@ -399,7 +426,6 @@ def make_pan_scan_video(
                 '-c:v', 'copy',  # Copiar video sin re-encodear
                 '-c:a', 'aac',  # Codec de audio
                 '-b:a', '192k',  # Bitrate de audio
-                '-shortest',  # Terminar cuando el stream más corto termine
                 output_path
             ]
             

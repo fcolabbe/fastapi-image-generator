@@ -735,12 +735,20 @@ async def generate_video_from_url(
     
     # Process audio if provided
     audio_path = None
+    actual_duration = duration
     if audio is not None:
         try:
             audio_data = await audio.read()
             audio_path = f"/tmp/audio_{uuid.uuid4()}{os.path.splitext(audio.filename)[1]}"
             with open(audio_path, 'wb') as f:
                 f.write(audio_data)
+            
+            # Obtener duración del audio para ajustar el video
+            from video_generator import get_audio_duration
+            audio_duration = get_audio_duration(audio_path)
+            if audio_duration:
+                actual_duration = audio_duration
+                
         except Exception as exc:
             raise HTTPException(status_code=400, detail=f"Could not process audio file: {exc}")
     
@@ -754,7 +762,7 @@ async def generate_video_from_url(
             image_input=base_img,
             headline=headline,
             highlight=highlight,
-            duration=duration,
+            duration=actual_duration,
             out_w=1080,
             out_h=1920,
             fps=fps,
@@ -775,11 +783,12 @@ async def generate_video_from_url(
             "video_url": video_url,
             "headline": headline,
             "highlight": highlight,
-            "duration": duration,
+            "duration": actual_duration,
             "direction": direction,
             "fps": fps,
             "format": "9:16",
             "dimensions": "1080x1920",
+            "has_audio": audio_path is not None,
             "timestamp": datetime.now().isoformat()
         }
         

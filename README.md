@@ -240,7 +240,7 @@ curl -X POST \
   http://localhost:8000/generate-video-from-url
 ```
 
-El audio se ajustará automáticamente a la duración del video. Si el audio es más largo, se cortará; si es más corto, el video continuará sin audio.
+**Importante**: Cuando se proporciona un archivo de audio, **la duración del video se ajusta automáticamente a la duración del audio**, independientemente del parámetro `duration`. El efecto pan & scan se extenderá o acortará para coincidir exactamente con la duración del audio.
 
 ## Características Técnicas
 
