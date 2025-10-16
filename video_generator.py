@@ -140,9 +140,12 @@ def create_text_overlay(
     highlight_color: Tuple[int, int, int] = (0, 64, 145),
     text_color: Tuple[int, int, int] = (0, 0, 0),
     box_color: Tuple[int, int, int, int] = (255, 255, 255, 230),
+    logo_path: Optional[str] = None,
+    logo_scale: float = 0.10,
 ) -> np.ndarray:
     """
     Create text overlay with same style as image generator.
+    Includes logo in top-right corner (EXACT same as generate_image_api.py).
     Returns RGBA numpy array.
     """
     # Create transparent overlay
@@ -152,16 +155,30 @@ def create_text_overlay(
     if not headline:
         return np.array(overlay)
     
-    # Font sizes for video (9:16 format - 1080x1920)
-    main_font_size = max(12, int(height * 0.038))
-    side_font_size = max(8, int(height * 0.022))
+    # Font sizes - ajustados según el aspecto del video
+    # Si es horizontal (width > height), usar fuentes más grandes
+    if width > height:
+        # Formato horizontal (como las imágenes)
+        main_font_size = max(12, int(height * 0.06))
+        side_font_size = max(8, int(height * 0.03))
+    else:
+        # Formato vertical (9:16)
+        main_font_size = max(12, int(height * 0.038))
+        side_font_size = max(8, int(height * 0.022))
     
     font_bold = _load_font_for_video(main_font_size, bold=True)
     font_reg = _load_font_for_video(main_font_size, bold=False)
     font_side = _load_font_for_video(side_font_size, bold=False)
     
     # Draw watermark on left side
-    bar_width = int(width * 0.05)
+    # Ajustar bar_width según formato (igual que generate_image_api.py)
+    if width > height:
+        # Formato horizontal
+        bar_width = int(width * 0.07)
+    else:
+        # Formato vertical
+        bar_width = int(width * 0.05)
+    
     temp = Image.new('RGBA', (height, bar_width), (0, 0, 0, 0))
     draw_temp = ImageDraw.Draw(temp)
     phrase = watermark + '   '
@@ -173,8 +190,51 @@ def create_text_overlay(
     vertical_img = temp.rotate(90, expand=True)
     overlay.paste(vertical_img, (0, 0), vertical_img)
     
+    # Load and paste logo in top-right corner (EXACT SAME as generate_image_api.py)
+    logo_image = None
+    if logo_path:
+        try:
+            logo_image = Image.open(logo_path).convert('RGBA')
+        except Exception as e:
+            print(f"⚠️  No se pudo cargar logo desde {logo_path}: {e}")
+    
+    if logo_image is None:
+        # Try to load default logo from current directory or script directory
+        import os
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        default_paths = [
+            'El_Dia.png',
+            os.path.join(script_dir, 'El_Dia.png'),
+            '/Users/fcolabbe/Downloads/imagen/El_Dia.png'
+        ]
+        for path in default_paths:
+            try:
+                logo_image = Image.open(path).convert('RGBA')
+                print(f"✅ Logo cargado desde: {path}")
+                break
+            except:
+                continue
+    
+    if logo_image is not None:
+        logo_w = int(width * logo_scale)
+        # Maintain aspect ratio
+        logo_h = int(logo_w * logo_image.height / logo_image.width)
+        logo_resized = logo_image.resize((logo_w, logo_h), Image.Resampling.LANCZOS)
+        # Paste the logo in the top right corner with a small margin
+        overlay.paste(logo_resized, (width - logo_w - 10, 10), logo_resized)
+        print(f"📸 Logo añadido: {logo_w}x{logo_h} en esquina superior derecha")
+    else:
+        print("⚠️  Logo no encontrado, video sin logo")
+    
     # Process text with highlights (EXACT SAME LOGIC as generate_image_api.py)
-    available_width = width - bar_width - 10
+    # Ajustar available_width según formato (igual que generate_image_api.py)
+    if width > height:
+        # Formato horizontal
+        available_width = width - bar_width - 20
+    else:
+        # Formato vertical
+        available_width = width - bar_width - 10
+    
     draw_dummy = ImageDraw.Draw(Image.new('RGB', (10, 10)))
     
     # Create a character-by-character map of which characters are highlighted
@@ -257,7 +317,9 @@ def create_text_overlay(
         return lines
     
     # Wrap the headline with variable line widths - calculate real width char by char
-    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * 0.85)
+    # Usar el mismo wrap_factor que generate_image_api.py
+    wrap_factor = 0.85  # Factor estándar para todos los formatos
+    wrapped_lines = wrap_text_with_highlights(headline, highlight_mask, font_reg, available_width * wrap_factor)
     
     # Calculate dimensions for each line
     padding_x = 20
