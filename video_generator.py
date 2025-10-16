@@ -191,10 +191,20 @@ def create_text_overlay(
     overlay.paste(vertical_img, (0, 0), vertical_img)
     
     # Load and paste logo in top-right corner (EXACT SAME as generate_image_api.py)
+    # IMPORTANTE: Preservar colores originales del logo
     logo_image = None
     if logo_path:
         try:
-            logo_image = Image.open(logo_path).convert('RGBA')
+            # Cargar logo SIN convertir primero, para preservar colores
+            logo_temp = Image.open(logo_path)
+            # Si tiene transparencia, mantenerla; si no, agregarla
+            if logo_temp.mode == 'RGBA':
+                logo_image = logo_temp
+            elif logo_temp.mode == 'RGB':
+                # Crear canal alpha basado en la imagen
+                logo_image = logo_temp.convert('RGBA')
+            else:
+                logo_image = logo_temp.convert('RGBA')
         except Exception as e:
             print(f"⚠️  No se pudo cargar logo desde {logo_path}: {e}")
     
@@ -209,8 +219,15 @@ def create_text_overlay(
         ]
         for path in default_paths:
             try:
-                logo_image = Image.open(path).convert('RGBA')
-                print(f"✅ Logo cargado desde: {path}")
+                # Cargar logo preservando colores originales
+                logo_temp = Image.open(path)
+                if logo_temp.mode == 'RGBA':
+                    logo_image = logo_temp
+                elif logo_temp.mode == 'RGB':
+                    logo_image = logo_temp.convert('RGBA')
+                else:
+                    logo_image = logo_temp.convert('RGBA')
+                print(f"✅ Logo cargado desde: {path} (modo: {logo_temp.mode})")
                 break
             except:
                 continue
@@ -219,8 +236,9 @@ def create_text_overlay(
         logo_w = int(width * logo_scale)
         # Maintain aspect ratio
         logo_h = int(logo_w * logo_image.height / logo_image.width)
+        # Resize con LANCZOS para mejor calidad y preservar colores
         logo_resized = logo_image.resize((logo_w, logo_h), Image.Resampling.LANCZOS)
-        # Paste the logo in the top right corner with a small margin
+        # Paste usando el logo como máscara de transparencia para preservar colores
         overlay.paste(logo_resized, (width - logo_w - 10, 10), logo_resized)
         print(f"📸 Logo añadido: {logo_w}x{logo_h} en esquina superior derecha")
     else:
