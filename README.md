@@ -20,7 +20,7 @@ git clone <repository-url>
 cd imagen
 
 # Instalar dependencias
-pip install fastapi uvicorn pillow requests
+pip install -r requirements
 
 # Ejecutar la aplicación
 python3 generate_image_api.py

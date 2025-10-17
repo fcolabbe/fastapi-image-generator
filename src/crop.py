@@ -52,6 +52,8 @@ def _compute_4x5_box_within(W: int, H: int, roi: Tuple[int,int,int,int], anchor:
 
 def crop_to_4x5(
     image_path: str,
+    _img: Optional[Image.Image] = None,
+    save: Optional[bool] = False,
     out_path: Optional[str] = None,
     rel_box: Optional[Dict[str, float]] = None,
     abs_box: Optional[Dict[str, int]] = None,
@@ -70,7 +72,9 @@ def crop_to_4x5(
 
     Returns a dict with details and output paths.
     """
-    img = Image.open(image_path).convert("RGB")
+    
+    if (_img): img = _img
+    else: img = Image.open(image_path).convert("RGB")
     W, H = img.size
 
     # Define ROI
@@ -95,6 +99,12 @@ def crop_to_4x5(
     if resize_to is not None:
         crop = crop.resize(resize_to, Image.Resampling.LANCZOS)
 
+    # Honestamente el resto no me interesa asi que fue
+    # me quedo con la foto recortada gracias
+    
+    if (not save):
+        return crop
+    
     # Output paths
     if out_path is None:
         base, ext = os.path.splitext(os.path.basename(image_path))
@@ -148,6 +158,7 @@ def main():
 
     result = crop_to_4x5(
         image_path=args.image,
+        save=True,
         out_path=args.out,
         rel_box=rel_box,
         abs_box=abs_box,
