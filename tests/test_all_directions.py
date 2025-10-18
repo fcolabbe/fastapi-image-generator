@@ -6,7 +6,7 @@ Script para probar todas las direcciones de pan & scan
 import requests
 from PIL import Image
 import io
-from video_generator import make_pan_scan_video
+from videoeditor import make_pan_scan_video
 
 # Descargar imagen de prueba
 print("📥 Descargando imagen de prueba...")

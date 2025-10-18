@@ -45,7 +45,7 @@ server.pid
 temp/
 tmp/
 *.tmp
-
+.env
 # Result images (opcional - comentar si quieres incluir ejemplos)
 # resultado_*.png
 # resultado_*.jpg

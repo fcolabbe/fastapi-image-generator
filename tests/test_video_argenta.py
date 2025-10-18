@@ -6,7 +6,7 @@ Destacado: buscará su séptima corona sub20
 """
 
 from PIL import Image
-from video_generator import make_pan_scan_video
+from videoeditor import make_pan_scan_video
 import subprocess
 
 # Cargar imagen local
