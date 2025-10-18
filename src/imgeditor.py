@@ -52,16 +52,12 @@ def _load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
         # Last resort: try to use any available TrueType font
         return ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", size)
 
-
-# Helper function to calculate real width char by char (same logic as in wrapping)
-def calculate_line_real_width(text_str, highlights_list, draw_dummy, fonts):
-    """Calculate the REAL width as it will be drawn, char by char with correct fonts."""
-    total_width = 0
-    for i, char in enumerate(text_str):
-        is_highlighted = i < len(highlights_list) and highlights_list[i]
-        char_font = fonts["bold"] if is_highlighted else fonts["regular"]
-        total_width += draw_dummy.textlength(char, font=char_font)
-    return total_width
+def _load_fonts(main_font_size: int, side_font_size: int) -> dict:
+    return {
+        "bold": _load_font(main_font_size, bold=True),
+        "regular": _load_font(main_font_size, bold=False),
+        "side": _load_font(side_font_size, bold=False),
+    }
 
 def calculate_real_width(text_str, highlights_list, draw_dummy, fonts):
     """Calculate the REAL width as it will be drawn, char by char with correct fonts."""
@@ -149,7 +145,7 @@ def create_composite_image(
     text_color: tuple[int, int, int] = (0, 0, 0),
     box_color: tuple[int, int, int, int] = (255, 255, 255, 230),
     logo_scale: float = 0.10,
-    recorte: tuple[str, str] = (None, None), # Sabemos que solo se ocupa recorte para formato ig
+    recorte: Optional[str] = None, # Sabemos que solo se ocupa recorte para formato ig
 ) -> dict:
     """Compose a new image by drawing text and a logo over a base photograph.
 
@@ -246,16 +242,11 @@ def create_composite_image(
             side_font_size = max(8, int(height * 0.03))
 
         # Load fonts
-        fonts = {
-            "bold": _load_font(main_font_size, bold=True),
-            "regular": _load_font(main_font_size, bold=False),
-            "side": _load_font(side_font_size, bold=False),
-        }
-        
+        fonts = _load_fonts(main_font_size, side_font_size)
 
         # Prepare watermark along the left side
         # Para Instagram usamos barra lateral más delgada para más espacio de texto
-        if frm == "instragram":
+        if frm == "instagram":
             bar_width = int(width * 0.05)  # Barra más delgada en Instagram
         else:
             bar_width = int(width * 0.07)  # Barra normal en horizontal
@@ -337,7 +328,7 @@ def create_composite_image(
 
         for line_text, line_highlights in wrapped_lines:
             # Calculate REAL width considering bold and regular characters
-            real_width = calculate_line_real_width(line_text, line_highlights, draw_dummy, fonts)
+            real_width = calculate_real_width(line_text, line_highlights, draw_dummy, fonts)
             line_widths.append(real_width)
 
             # Height can use regular font as reference
