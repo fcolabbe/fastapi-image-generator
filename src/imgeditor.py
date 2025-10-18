@@ -2,7 +2,9 @@ from typing import Optional
 from PIL import Image, ImageDraw, ImageFont
 from fastapi import HTTPException
 import os
-from crop import crop_to_4x5
+from pathlib import Path
+from src.crop import crop_to_4x5
+
 
 def _load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     """Load a font at the requested size.
@@ -283,7 +285,7 @@ def create_composite_image(
         else:
             try:
                 # Attempt to load a default logo from the current directory
-                logo_image = Image.open("El_Dia.png").convert("RGBA")
+                logo_image = Image.open(f"{Path(__file__).resolve().parent.parent}/El_Dia.png").convert("RGBA")
             except Exception:
                 logo_image = None
         

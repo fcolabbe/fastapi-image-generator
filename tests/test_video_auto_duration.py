@@ -6,7 +6,7 @@ Test: Verificar que el video se ajusta automáticamente a la duración del audio
 import requests
 from PIL import Image
 import io
-from video_generator import make_pan_scan_video
+from videoeditor import make_pan_scan_video
 import subprocess
 
 # Descargar imagen de prueba

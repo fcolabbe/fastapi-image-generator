@@ -17,13 +17,13 @@ Una aplicación FastAPI que genera imágenes compuestas estilo noticia con texto
 ```bash
 # Clonar el repositorio
 git clone <repository-url>
-cd imagen
+cd fastapi-image-generator
 
 # Instalar dependencias
 pip install -r requirements
 
 # Ejecutar la aplicación
-python3 generate_image_api.py
+python3 app.py
 ```
 
 ## Uso
@@ -32,66 +32,18 @@ La aplicación estará disponible en `http://localhost:8000`
 
 ### Endpoints
 
-#### 1. Generar imagen desde archivo local
-```bash
-curl -X POST \
-  -F "headline=Título de la noticia" \
-  -F "highlight=texto destacado" \
-  -F "image=@imagen.jpg" \
-  http://localhost:8000/generate-image
-```
+#### 1. Generar imagen
 
-**Respuesta:**
-```json
-{
-  "success": true,
-  "image_url": "http://tu-servidor.com/public/images/generated_20250101_123456_abc12345.png",
-  "headline": "Título de la noticia",
-  "highlight": "texto destacado",
-  "timestamp": "2025-01-01T12:34:56.789Z"
-}
-```
-
-#### 2. Generar imagen desde URL
-```bash
-curl -X POST \
-  -F "headline=Título de la noticia" \
-  -F "highlight=texto destacado" \
-  -F "image_url=https://ejemplo.com/imagen.jpg" \
-  http://localhost:8000/generate-image-from-url
-```
-
-**Respuesta:**
-La API ahora genera automáticamente **AMBAS versiones** (horizontal para web/Facebook e Instagram vertical 4:5):
-
-```json
-{
-  "success": true,
-  "images": {
-    "horizontal": {
-      "url": "https://tu-servidor.com/public/images/generated_20250101_123456_abc12345.png",
-      "format": "original",
-      "description": "Imagen horizontal para web/Facebook"
-    },
-    "instagram": {
-      "url": "https://tu-servidor.com/public/images/generated_20250101_123457_def67890.png",
-      "format": "4:5",
-      "dimensions": "1080x1350",
-      "description": "Imagen vertical optimizada para Instagram"
-    }
-  },
-  "headline": "Título de la noticia",
-  "highlight": "texto destacado",
-  "timestamp": "2025-01-01T12:34:56.789Z"
-}
-```
+```/generate-image```
 
 ## Parámetros
 
 - **headline**: El titular completo de la noticia
 - **highlight**: El texto que se destacará (debe estar contenido en el headline)
-- **image**: Archivo de imagen local (para endpoint `/generate-image`)
-- **image_url**: URL de la imagen (para endpoint `/generate-image-from-url`)
+- **image**: Archivo de imagen local (para trabajo directo con imagenes)
+- **image_url**: URL de la imagen (para cuando se trabaje con links)
+- **logo**: *(opcional)* Archivo del logo si se usa 
+- **logo_url**: *(opcional)* URL del logo si se quiere usar y no se incluye imagen directa
 - **recorte** *(opcional)*: ROI para recorte Instagram como "x,y,w,h" en valores 0..1
   - Ejemplo: `"0.14,0,0.72,1"` (recorta 14% izquierda, mantiene 72% ancho, altura completa)
   - Si no se especifica, usa recorte centrado automático
@@ -118,7 +70,7 @@ curl -X POST \
   -F "headline=Cambio de mando en Carabineros: General Christian Brebi asume como nuevo Jefe de la Zona Coquimbo" \
   -F "highlight=General Christian Brebi" \
   -F "image_url=https://diarioeldia-s3.cdn.net.ar/s3i233/2025/10/diarioeldia/images/02/31/23/2312395_6bfbb9a763f2750c48d613bd27b191339e04f4dc2c7eeb675fc27762fa4373e3/md.webp" \
-  http://localhost:8000/generate-image-from-url
+  http://localhost:8000/generate-image
 ```
 
 **Respuesta:**
@@ -144,21 +96,12 @@ curl -X POST \
 }
 ```
 
-### Ejemplo 2: Noticia de Combarbalá
+### Ejemplo 2: Con recorte personalizado para Instagram
 ```bash
 curl -X POST \
   -F "headline=Terror en Combarbalá: Sujeto intenta estrangular a su pareja con un alargador" \
   -F "highlight=intenta estrangular a su pareja" \
-  -F "image_url=https://diarioeldia-s3.cdn.net.ar/s3i233/2025/10/diarioeldia/images/02/31/23/2312342_75083517659dc319fb47d1ab8d1e34cf045cf83ab0722e782cf72d14e44adf98/md.webp" \
-  http://localhost:8000/generate-image-from-url
-```
-
-### Ejemplo 3: Con recorte personalizado para Instagram
-```bash
-curl -X POST \
-  -F "headline=Mundial Sub-20: Francia vence a Noruega en un partido emocionante" \
-  -F "highlight=Francia vence a Noruega" \
-  -F "image_url=https://ejemplo.com/mundial-sub-20-francia-noruega.webp" \
+  -F "image_url=image_url=https://diarioeldia-s3.cdn.net.ar/s3i233/2025/10/diarioeldia/images/02/31/23/2312342_75083517659dc319fb47d1ab8d1e34cf045cf83ab0722e782cf72d14e44adf98/md.webp" \
   -F "recorte=0.14,0,0.72,1" \
   http://localhost:8000/generate-image-from-url
 ```
@@ -171,24 +114,16 @@ curl -X POST \
 
 Este recorte es ideal para imágenes con barras laterales o elementos no deseados en los bordes.
 
-## Generación de Videos
 
-### Endpoint: `/generate-video-from-url`
+### Generar video con url 
+```/generate-video-from-url```
 
 Genera videos en formato 9:16 (1080x1920) con efecto pan & scan cinematográfico:
 
-```bash
-curl -X POST \
-  -F "headline=Cambio de mando en Carabineros: General Christian Brebi asume como nuevo Jefe" \
-  -F "highlight=General Christian Brebi" \
-  -F "image_url=https://ejemplo.com/imagen.jpg" \
-  -F "duration=5.0" \
-  -F "direction=left-to-right" \
-  -F "fps=30" \
-  http://localhost:8000/generate-video-from-url
-```
-
 **Parámetros del video:**
+- **headline**: El titular completo de la noticia
+- **highlight**: El texto que se destacará (debe estar contenido en el headline)
+- **image_url**: URL de la imagen que se usara en el fonde del video
 - **duration**: Duración en segundos (1-30, default: 5.0)
 - **direction**: Dirección del efecto pan & scan
   - `left-to-right`: Panorámica de izquierda a derecha
@@ -201,6 +136,7 @@ curl -X POST \
   - `diagonal-tr-bl`: Diagonal top-right a bottom-left
 - **fps**: Cuadros por segundo (default: 30)
 - **audio** *(opcional)*: Archivo de audio (mp3, wav, etc.) para agregar al video
+- **keep_aspect**: *(boolean)* Si es que se mantiene la relacion de aspecto de la imagen
 
 **Respuesta:**
 ```json
@@ -269,38 +205,40 @@ curl -X POST \
 
 ## Configuración
 
+Al ejecutar el programa por primera vez que creara un archivo .env
+Edita el archivo `.env` para las opciones que necesites:
+
 ### Configurar URL del Servidor
 
-Edita el archivo `config.py` para cambiar la URL base:
-
-```python
+```bash
 # URL base del servidor - CAMBIAR POR TU DOMINIO REAL
 BASE_URL = "http://tu-dominio.com"
-```
-
-### Variables de Entorno
-
-También puedes usar variables de entorno:
-
-```bash
-export BASE_URL="https://mi-dominio.com"
-export LOG_LEVEL="debug"
 ```
 
 ## Estructura del Proyecto
 
 ```
-imagen/
-├── generate_image_api.py    # Aplicación principal FastAPI
-├── config.py               # Configuración de la aplicación
-├── app.py                  # Punto de entrada para producción
-├── ecosystem.config.js     # Configuración de PM2
-├── nginx.conf              # Configuración de Nginx
-├── deploy.sh               # Script de despliegue
-├── requirements.txt        # Dependencias Python
-├── README.md               # Documentación
-├── El_Dia.png             # Logo del diario
-└── public/images/         # Directorio de imágenes generadas
+fastapi-image-generator/
+├──src/
+|   ├── generate_image_api.py    # Aplicación principal FastAPI
+|   ├── config.py                # Configuración de la aplicación
+|   ├── crop.py                  # Modulo encargado de recortar las fotos
+|   ├── imgeditor.py             # Modulo que formatea las fotos para su uso
+|   └── videoeditor.py           # Modulo que formatea los videos para su uso
+|
+├──tests/                        # Muchos archivos de testeo que no quise borrar
+|
+├──public/images/                # Directorio de imágenes generadas
+├──public/videos/                # Directorio de videos generados
+|
+├── app.py                       # Punto de entrada para producción
+├── ecosystem.config.js          # Configuración de PM2
+├── nginx.conf                   # Configuración de Nginx
+├── deploy.sh                    # Script de despliegue
+├── requirements.txt             # Dependencias Python
+├── README.md                    # Documentación
+├── El_Dia.png                   # Logo del diario
+└── 
 ```
 
 ## Dependencias
@@ -309,6 +247,8 @@ imagen/
 - **Uvicorn**: Servidor ASGI
 - **Pillow (PIL)**: Manipulación de imágenes
 - **Requests**: Descarga de imágenes desde URLs
+- **cv2**: 
+- **numpy**:
 
 ## Licencia
 
