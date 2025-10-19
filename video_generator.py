@@ -652,7 +652,7 @@ def make_static_video_with_audio(
     image_input,
     audio_path: str,
     fps: int = 30,
-    logo_path: str = "El_Dia.png",
+    logo_path: Optional[str] = None,
     logo_scale: float = 0.10,
 ):
     """
@@ -664,7 +664,7 @@ def make_static_video_with_audio(
         image_input: PIL Image, ruta de archivo, o array numpy de la imagen base
         audio_path: Ruta al archivo de audio (mp3, wav, etc.)
         fps: Frames por segundo del video (default: 30)
-        logo_path: Ruta al archivo del logo (default: "El_Dia.png")
+        logo_path: Ruta al archivo del logo (default: None, sin logo)
         logo_scale: Escala del logo relativa al ancho de la imagen (default: 0.10)
     """
     import tempfile
