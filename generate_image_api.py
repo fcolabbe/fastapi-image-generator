@@ -828,7 +828,8 @@ async def generate_video_from_url(
 async def generate_static_video_from_url(
     image_url: str = Form(..., description="URL de la portada del diario"),
     audio: UploadFile = File(..., description="Archivo de audio con el resumen noticioso (mp3, wav, etc.)"),
-    fps: int = Form(30, description="Frames por segundo (default: 30)")
+    fps: int = Form(30, description="Frames por segundo (default: 30)"),
+    add_logo: bool = Form(False, description="Agregar logo en la esquina superior derecha (default: False)")
 ):
     """
     Genera un video estático mostrando únicamente la portada del diario con audio.
@@ -839,6 +840,7 @@ async def generate_static_video_from_url(
     - **image_url**: URL de la portada del diario
     - **audio**: Archivo de audio con el resumen (el video durará lo mismo que el audio)
     - **fps**: Frames por segundo del video (default: 30)
+    - **add_logo**: Agregar logo de El Día en la esquina (default: False)
     
     Returns:
         JSON con la URL del video generado, duración, dimensiones y metadata
@@ -881,7 +883,8 @@ async def generate_static_video_from_url(
             output_path=temp_path,
             image_input=base_img,
             audio_path=audio_path,
-            fps=fps
+            fps=fps,
+            logo_path="El_Dia.png" if add_logo else None
         )
         
         # Get video dimensions using ffprobe

@@ -685,7 +685,7 @@ def make_static_video_with_audio(
     print(f"📐 Dimensiones de la imagen: {w}x{h}")
     
     # Load and add logo if provided
-    if logo_path and os.path.exists(logo_path):
+    if logo_path is not None and os.path.exists(logo_path):
         try:
             logo_img = Image.open(logo_path)
             if logo_img.mode != 'RGBA':
