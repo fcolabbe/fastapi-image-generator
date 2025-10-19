@@ -47,7 +47,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 # Importar configuración
 from config import BASE_URL, PUBLIC_IMAGES_DIR, APP_NAME, APP_DESCRIPTION
-from video_generator import make_pan_scan_video
+from video_generator import make_pan_scan_video, make_static_video_with_audio
 
 app = FastAPI(title=APP_NAME, description=APP_DESCRIPTION)
 
@@ -819,6 +819,105 @@ async def generate_video_from_url(
         
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Video generation failed: {exc}")
+
+
+@app.post("/generate-static-video-from-url", responses={
+    200: {"description": "Video generado exitosamente con portada y audio"},
+    500: {"description": "Error en la generación del video"}
+})
+async def generate_static_video_from_url(
+    image_url: str = Form(..., description="URL de la portada del diario"),
+    audio: UploadFile = File(..., description="Archivo de audio con el resumen noticioso (mp3, wav, etc.)"),
+    fps: int = Form(30, description="Frames por segundo (default: 30)")
+):
+    """
+    Genera un video estático mostrando únicamente la portada del diario con audio.
+    
+    Sin texto, sin efectos de movimiento, solo la imagen estática con el audio del resumen noticioso.
+    Ideal para resúmenes diarios de noticias.
+    
+    - **image_url**: URL de la portada del diario
+    - **audio**: Archivo de audio con el resumen (el video durará lo mismo que el audio)
+    - **fps**: Frames por segundo del video (default: 30)
+    
+    Returns:
+        JSON con la URL del video generado, duración, dimensiones y metadata
+    """
+    import tempfile
+    from datetime import datetime
+    
+    try:
+        # Download image from URL
+        response = requests.get(image_url)
+        response.raise_for_status()
+        base_img = Image.open(BytesIO(response.content))
+        
+        # Save audio temporarily
+        audio_path = None
+        if audio:
+            audio_suffix = os.path.splitext(audio.filename)[1] if audio.filename else ".wav"
+            with tempfile.NamedTemporaryFile(delete=False, suffix=audio_suffix) as tmp_audio:
+                tmp_audio.write(await audio.read())
+                audio_path = tmp_audio.name
+        
+        # Get audio duration
+        from video_generator import get_audio_duration
+        audio_duration = get_audio_duration(audio_path)
+        if not audio_duration:
+            raise HTTPException(status_code=400, detail="No se pudo obtener la duración del audio")
+        
+        print(f"📻 Generando video estático con portada y audio de {audio_duration:.2f}s")
+        
+        # Generate unique filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        temp_filename = f"video_{timestamp}_{unique_id}.mp4"
+        temp_path = os.path.join(tempfile.gettempdir(), temp_filename)
+        
+        # Generate static video with audio
+        make_static_video_with_audio(
+            output_path=temp_path,
+            image_input=base_img,
+            audio_path=audio_path,
+            fps=fps
+        )
+        
+        # Get video dimensions using ffprobe
+        try:
+            result = subprocess.run(
+                ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+                 '-show_entries', 'stream=width,height',
+                 '-of', 'csv=s=x:p=0', temp_path],
+                capture_output=True,
+                text=True
+            )
+            video_dimensions = result.stdout.strip() if result.returncode == 0 else "unknown"
+        except:
+            video_dimensions = "unknown"
+        
+        # Move to public directory and get URL
+        video_url = _save_video_and_get_url(temp_path)
+        
+        # Clean up audio file
+        if audio_path and os.path.exists(audio_path):
+            os.remove(audio_path)
+        
+        return {
+            "success": True,
+            "video_url": video_url,
+            "duration": audio_duration,
+            "fps": fps,
+            "dimensions": video_dimensions,
+            "format": "static",
+            "has_audio": True,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as exc:
+        # Clean up audio file on error
+        if audio_path and os.path.exists(audio_path):
+            os.remove(audio_path)
+        raise HTTPException(status_code=500, detail=f"Static video generation failed: {exc}")
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -643,3 +643,128 @@ def make_pan_scan_video(
             output_params=['-crf', '23', '-preset', 'medium']
         )
 
+# Nueva función para agregar al final de video_generator.py
+
+def make_static_video_with_audio(
+    output_path: str,
+    image_input,
+    audio_path: str,
+    fps: int = 30,
+    logo_path: str = "El_Dia.png",
+    logo_scale: float = 0.10,
+):
+    """
+    Crea un video estático mostrando solo una imagen (portada del diario) con audio.
+    Sin texto, sin pan & scan, solo la imagen estática con el audio del resumen noticioso.
+    
+    Args:
+        output_path: Ruta donde guardar el video MP4 final
+        image_input: PIL Image, ruta de archivo, o array numpy de la imagen base
+        audio_path: Ruta al archivo de audio (mp3, wav, etc.)
+        fps: Frames por segundo del video (default: 30)
+        logo_path: Ruta al archivo del logo (default: "El_Dia.png")
+        logo_scale: Escala del logo relativa al ancho de la imagen (default: 0.10)
+    """
+    import tempfile
+    
+    print(f"🎬 Generando video estático con audio...")
+    
+    # Get audio duration
+    audio_duration = get_audio_duration(audio_path)
+    if not audio_duration:
+        raise ValueError(f"No se pudo obtener la duración del audio: {audio_path}")
+    
+    print(f"⏱️  Duración del audio: {audio_duration:.2f}s")
+    
+    # Load base image
+    base = load_image_cv2(image_input)
+    h, w = base.shape[:2]
+    
+    print(f"📐 Dimensiones de la imagen: {w}x{h}")
+    
+    # Load and add logo if provided
+    if logo_path and os.path.exists(logo_path):
+        try:
+            logo_img = Image.open(logo_path)
+            if logo_img.mode != 'RGBA':
+                logo_img = logo_img.convert('RGBA')
+            
+            # Calculate logo size
+            logo_width = int(w * logo_scale)
+            logo_height = int(logo_img.height * (logo_width / logo_img.width))
+            logo_img = logo_img.resize((logo_width, logo_height), Image.Resampling.LANCZOS)
+            
+            # Convert base image to PIL for compositing
+            base_pil = Image.fromarray(cv2.cvtColor(base, cv2.COLOR_BGR2RGB))
+            
+            # Position logo in top-right corner with margin
+            margin = int(w * 0.02)
+            logo_x = w - logo_width - margin
+            logo_y = margin
+            
+            # Paste logo
+            base_pil.paste(logo_img, (logo_x, logo_y), logo_img)
+            
+            # Convert back to OpenCV format
+            base = cv2.cvtColor(np.array(base_pil), cv2.COLOR_RGB2BGR)
+            
+            print(f"✅ Logo añadido: {logo_width}x{logo_height} en esquina superior derecha")
+        except Exception as e:
+            print(f"⚠️  No se pudo cargar el logo: {e}")
+    
+    # Calculate total frames
+    total_frames = int(audio_duration * fps)
+    
+    print(f"🎞️  Generando {total_frames} frames a {fps} FPS...")
+    
+    # Create temporary video without audio
+    temp_video_path = output_path.replace('.mp4', '_temp.mp4')
+    
+    try:
+        # Write frames (all identical for static video)
+        writer = imageio.get_writer(
+            temp_video_path,
+            fps=fps,
+            codec='libx264',
+            pixelformat='yuv420p',
+            quality=8,
+            macro_block_size=16
+        )
+        
+        # Convert to RGB for imageio
+        frame_rgb = cv2.cvtColor(base, cv2.COLOR_BGR2RGB)
+        
+        # Write all frames (same image repeated)
+        for i in range(total_frames):
+            writer.append_data(frame_rgb)
+            if (i + 1) % 100 == 0:
+                print(f"  Progreso: {i + 1}/{total_frames} frames ({(i + 1) / total_frames * 100:.1f}%)")
+        
+        writer.close()
+        print(f"✅ Video sin audio generado: {temp_video_path}")
+        
+        # Mix with audio using ffmpeg
+        print(f"🎵 Mezclando con audio...")
+        cmd = [
+            'ffmpeg',
+            '-y',
+            '-i', temp_video_path,
+            '-i', audio_path,
+            '-c:v', 'copy',
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            output_path
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            raise Exception(f"FFmpeg error: {result.stderr}")
+        
+        print(f"✅ Video final con audio guardado: {output_path}")
+        
+    finally:
+        # Clean up temporary video
+        if os.path.exists(temp_video_path):
+            os.remove(temp_video_path)
+
