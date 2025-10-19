@@ -3,6 +3,8 @@ Video Generator with Pan & Scan Effect
 Generates cinematic videos from images with text overlays
 """
 
+import os
+import subprocess
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
