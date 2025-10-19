@@ -1,30 +1,81 @@
-# FastAPI Image Generator - Generador de Imágenes de Noticias
+# FastAPI Image Generator - Generador de Imágenes y Videos de Noticias
 
-Una aplicación FastAPI que genera imágenes compuestas estilo noticia con texto destacado integrado.
+Una aplicación FastAPI que genera imágenes y videos compuestos estilo noticia con texto destacado integrado.
 
-## Características
+## ✨ Características
 
-- **API REST** para generar imágenes compuestas
-- **Soporte para imágenes locales y URLs**
-- **Texto destacado integrado** con color personalizado y formato bold
+### Imágenes
+- **Formato horizontal** automático para web
+- **Formato Instagram** (4:5 vertical) con recorte inteligente
+- **Texto destacado** con color personalizado y formato bold
 - **Wrapping inteligente** que nunca corta palabras
 - **Líneas de ancho variable** y centradas automáticamente
-- **Compatibilidad multiplataforma** (macOS/Linux/Windows)
 - **Alineación vertical perfecta** entre texto regular y bold
+- **Logo personalizado** en esquina superior derecha
 
-## Instalación
+### Videos
+- **Efecto pan & scan** con múltiples direcciones (zoom-in, zoom-out, left-to-right, etc.)
+- **Audio sincronizado** automáticamente
+- **Aspecto original preservado** o formato 9:16 para redes sociales
+- **Logo y texto overlay** con el mismo estilo que las imágenes
+- **Duración automática** según el audio
+
+### General
+- **API REST** con documentación interactiva
+- **Soporte para URLs** y archivos locales
+- **Compatibilidad multiplataforma** (macOS/Linux/Windows)
+- **Optimizado para producción** con PM2 y Nginx
+
+---
+
+## 🚀 Instalación Rápida
+
+### Opción 1: Con Dominio Propio (Recomendado)
+
+```bash
+# En tu servidor (Ubuntu 22.04/24.04)
+curl -fsSL https://raw.githubusercontent.com/fcolabbe/fastapi-image-generator/main/install.sh | bash
+```
+
+📖 **Documentación completa**: [INSTALACION_RAPIDA.md](INSTALACION_RAPIDA.md)
+
+### Opción 2: Con ngrok (Sin dominio)
+
+```bash
+# Obtén tu authtoken de https://dashboard.ngrok.com/get-started/your-authtoken
+# Luego ejecuta:
+curl -fsSL https://raw.githubusercontent.com/fcolabbe/fastapi-image-generator/main/install_with_ngrok.sh | bash -s TU_AUTHTOKEN
+```
+
+📖 **Documentación completa**: [INSTALACION_CON_NGROK.md](INSTALACION_CON_NGROK.md)
+
+### Opción 3: Desarrollo Local
 
 ```bash
 # Clonar el repositorio
-git clone <repository-url>
-cd imagen
+git clone https://github.com/fcolabbe/fastapi-image-generator.git
+cd fastapi-image-generator
+
+# Crear virtual environment
+python3 -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
 
 # Instalar dependencias
-pip install fastapi uvicorn pillow requests
+pip install -r requirements.txt
 
-# Ejecutar la aplicación
-python3 generate_image_api.py
+# Ejecutar
+uvicorn generate_image_api:app --reload
 ```
+
+---
+
+## 📋 Requisitos del Servidor
+
+- **RAM**: 2GB mínimo (4GB recomendado para videos largos)
+- **CPU**: 2 cores mínimo
+- **Disco**: 20GB mínimo
+- **OS**: Ubuntu 22.04/24.04, macOS, o Windows
+- **Dominio** (opcional): Para instalación con Nginx/SSL
 
 ## Uso
 
