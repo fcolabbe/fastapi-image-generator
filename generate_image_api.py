@@ -845,6 +845,9 @@ async def generate_static_video_from_url(
     """
     import tempfile
     from datetime import datetime
+    from io import BytesIO
+    
+    audio_path = None
     
     try:
         # Download image from URL
@@ -853,7 +856,6 @@ async def generate_static_video_from_url(
         base_img = Image.open(BytesIO(response.content))
         
         # Save audio temporarily
-        audio_path = None
         if audio:
             audio_suffix = os.path.splitext(audio.filename)[1] if audio.filename else ".wav"
             with tempfile.NamedTemporaryFile(delete=False, suffix=audio_suffix) as tmp_audio:
